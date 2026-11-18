@@ -29,6 +29,7 @@
   "scripts": {
     "dev": "node scripts/serve_worker.mjs",
     "build": "python scripts/remap.py && python scripts/build_worker.py",
+    "db:generate": "drizzle-kit generate",
     "snapshot": "python scripts/mirror.py",
     "start": "node scripts/serve_worker.mjs",
     "lint": "eslint",
@@ -52,6 +53,8 @@
     "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.10",
+    "drizzle-orm": "^0.45.2",
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
     "tailwindcss": "^4",

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import worker from '../dist/server/index.js';
+import {createLocalQuotaDb} from '../scripts/local_quota.mjs';
 
 const originalFetch = globalThis.fetch;
 const seen = [];
@@ -24,26 +25,33 @@ globalThis.fetch = async (input, options = {}) => {
 };
 
 try {
-  const status = await worker.fetch(new Request('https://site.test/api/try-on/status'), {GENLOOK_API_KEY: 'test-server-key'});
-  assert.deepEqual(await status.json(), {available: true});
-  const body = new FormData();
-  body.append('handle', 'angelic-cinderella-dress');
-  body.append('image_index', '1');
-  body.append('person', new File([new Uint8Array(1200)], 'person.jpg', {type: 'image/jpeg'}));
-  const request = new Request('https://site.test/api/try-on', {method: 'POST', body});
-  const result = await worker.fetch(request, {GENLOOK_API_KEY: 'test-server-key'});
+  const env = {GENLOOK_API_KEY: 'test-server-key', DB: createLocalQuotaDb()};
+  const status = await worker.fetch(new Request('https://site.test/api/try-on/status'), env);
+  assert.deepEqual(await status.json(), {available: true, reason: null});
+  const requestFor = (ip, handle = 'angelic-cinderella-dress') => {
+    const body = new FormData();
+    body.append('handle', handle);
+    body.append('image_index', '1');
+    body.append('person', new File([new Uint8Array(1200)], 'person.jpg', {type: 'image/jpeg'}));
+    return new Request('https://site.test/api/try-on', {method: 'POST', headers: {'CF-Connecting-IP': ip}, body});
+  };
+  const result = await worker.fetch(requestFor('192.0.2.1'), env);
   assert.equal(result.status, 200);
   assert.equal(result.headers.get('content-type'), 'image/png');
   assert.equal((await result.arrayBuffer()).byteLength, 6);
   assert.equal(seen.length, 3);
 
-  const invalid = new FormData();
-  invalid.append('handle', 'unknown-product');
-  invalid.append('person', new File([new Uint8Array(1200)], 'person.jpg', {type: 'image/jpeg'}));
-  const rejected = await worker.fetch(new Request('https://site.test/api/try-on', {method: 'POST', body: invalid}), {GENLOOK_API_KEY: 'test-server-key'});
+  const rejected = await worker.fetch(requestFor('192.0.2.1', 'unknown-product'), env);
   assert.equal(rejected.status, 400);
   assert.equal(seen.length, 3);
-  console.log('Try-on Worker: valid image response, provider payload, and invalid product rejection passed');
+  assert.equal((await worker.fetch(requestFor('192.0.2.1'), env)).status, 200);
+  assert.equal((await worker.fetch(requestFor('192.0.2.1'), env)).status, 429);
+  for (let i = 2; i <= 4; i++) assert.equal((await worker.fetch(requestFor(`192.0.2.${i}`), env)).status, 200);
+  assert.equal((await worker.fetch(requestFor('192.0.2.5'), env)).status, 429);
+  assert.equal(seen.length, 15);
+  const full = await worker.fetch(new Request('https://site.test/api/try-on/status'), env);
+  assert.equal((await full.json()).available, false);
+  console.log('Try-on Worker: provider payload, invalid product, visitor cap, and daily cap passed');
 } finally {
   globalThis.fetch = originalFetch;
 }

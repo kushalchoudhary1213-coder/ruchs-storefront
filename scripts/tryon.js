@@ -52,7 +52,7 @@
       .then(data => {
         if (layer.hidden) return;
         available = !!data.available;
-        setStatus(available ? 'Choose a photo to begin.' : 'Try-on is unavailable right now.', !available);
+        setStatus(available ? 'Choose a photo to begin.' : (data.reason || 'Try-on is unavailable right now.'), !available);
         updateButton();
       })
       .catch(() => { available = false; setStatus('Try-on is unavailable right now.', true); updateButton(); });

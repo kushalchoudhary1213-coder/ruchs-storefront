@@ -1,8 +1,10 @@
 import http from 'node:http';
 import {Readable} from 'node:stream';
 import worker from '../dist/server/index.js';
+import {createLocalQuotaDb} from './local_quota.mjs';
 
 const port = Number(process.env.PORT || 4173);
+const DB = createLocalQuotaDb();
 http.createServer(async (incoming, outgoing) => {
   const chunks = [];
   for await (const chunk of incoming) chunks.push(chunk);
@@ -13,7 +15,7 @@ http.createServer(async (incoming, outgoing) => {
     body: chunks.length ? Buffer.concat(chunks) : undefined,
   });
   try {
-    const response = await worker.fetch(request, {GENLOOK_API_KEY: process.env.GENLOOK_API_KEY});
+    const response = await worker.fetch(request, {GENLOOK_API_KEY: process.env.GENLOOK_API_KEY, DB});
     outgoing.writeHead(response.status, Object.fromEntries(response.headers));
     if (response.body) Readable.fromWeb(response.body).pipe(outgoing);
     else outgoing.end();

@@ -1,5 +1,7 @@
 const providerBase = 'https://api.genlook.app/tryon/v1';
 const noStore = {'cache-control': 'no-store'};
+const dailyLimit = 5;
+const visitorLimit = 2;
 
 function json(value, status = 200) {
   return new Response(JSON.stringify(value), {
@@ -25,8 +27,26 @@ function garmentTitle(product) {
   return 'Dress';
 }
 
+async function reserveQuota(db, day, scope, subject, limit) {
+  const row = await db.prepare(`
+    INSERT INTO tryon_quota (day, scope, subject, count) VALUES (?, ?, ?, 1)
+    ON CONFLICT(day, scope, subject) DO UPDATE SET count = tryon_quota.count + 1
+    WHERE tryon_quota.count < ? RETURNING count
+  `).bind(day, scope, subject, limit).first();
+  return !!row;
+}
+
+async function visitorHash(request, key, day) {
+  const identity = request.headers.get('oai-authenticated-user-id') ||
+    request.headers.get('cf-connecting-ip') ||
+    request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
+  const bytes = new TextEncoder().encode(`${key}:${day}:${identity}`);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
 async function tryOn(request, env) {
-  if (!env.GENLOOK_API_KEY) return json({error: 'Try-on is unavailable right now.'}, 503);
+  if (!env.GENLOOK_API_KEY || !env.DB) return json({error: 'Try-on is unavailable right now.'}, 503);
   if (Number(request.headers.get('content-length') || 0) > 3_500_000) {
     return json({error: 'Please choose a smaller photo.'}, 413);
   }
@@ -43,6 +63,20 @@ async function tryOn(request, env) {
   }
   if (!product || !Number.isInteger(imageIndex) || imageIndex < 0 || imageIndex >= product.images.length) {
     return json({error: 'Choose a valid product photo.'}, 400);
+  }
+
+  try {
+    const day = new Date().toISOString().slice(0, 10);
+    const visitor = await visitorHash(request, env.GENLOOK_API_KEY, day);
+    if (!await reserveQuota(env.DB, day, 'visitor', visitor, visitorLimit)) {
+      return json({error: 'You have used today’s try-on previews. Please try again tomorrow.'}, 429);
+    }
+    if (!await reserveQuota(env.DB, day, 'global', 'all', dailyLimit)) {
+      return json({error: 'Today’s try-on previews are full. Please try again tomorrow.'}, 429);
+    }
+  } catch (error) {
+    console.error('Try-on quota unavailable', error?.message || 'unknown');
+    return json({error: 'Try-on is unavailable right now.'}, 503);
   }
 
   try {
@@ -109,7 +143,15 @@ export default {
   async fetch(request, env) {
     const path = new URL(request.url).pathname;
     if (path === '/api/try-on/status' && request.method === 'GET') {
-      return json({available: !!env.GENLOOK_API_KEY});
+      if (!env.GENLOOK_API_KEY || !env.DB) return json({available: false, reason: 'Try-on is unavailable right now.'});
+      try {
+        const day = new Date().toISOString().slice(0, 10);
+        const row = await env.DB.prepare('SELECT count FROM tryon_quota WHERE day = ? AND scope = ? AND subject = ?').bind(day, 'global', 'all').first();
+        const available = Number(row?.count || 0) < dailyLimit;
+        return json({available, reason: available ? null : 'Today’s try-on previews are full. Please try again tomorrow.'});
+      } catch {
+        return json({available: false, reason: 'Try-on is unavailable right now.'});
+      }
     }
     if (path === '/api/try-on' && request.method === 'POST') return tryOn(request, env);
     if (request.method !== 'GET' && request.method !== 'HEAD') return new Response('Method not allowed', {status: 405});
