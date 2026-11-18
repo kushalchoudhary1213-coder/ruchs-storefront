@@ -5,6 +5,7 @@ from __future__ import annotations
 import html
 import json
 import re
+import base64
 import shutil
 from pathlib import Path
 from urllib.parse import urlparse
@@ -98,7 +99,7 @@ def footer() -> str:
 
 
 def page(title: str, body: str, description: str = "Thoughtfully crafted sustainable fashion by Ruchs.", kind: str = "product") -> str:
-    return f'''<!doctype html><html lang="en" data-type="{kind}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#43162b"><meta name="page-type" content="{kind}"><meta name="site-kind" content="other"><meta name="description" content="{text(description)}"><title>{text(title)} — Ruchs</title><link rel="icon" href="/cdn/shop/files/IMG_3941_48cfe4a1-81fc-463d-9b5d-aed2d550434b.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="/remap.css"><link rel="stylesheet" href="/tryon.css"><link rel="stylesheet" href="/live-tryon.css"><script defer src="/remap.js"></script><script defer src="/tryon.js"></script><script defer src="/live-tryon.js"></script></head><body>{header()}<main id="main">{body}</main>{footer()}</body></html>'''
+    return f'''<!doctype html><html lang="en" data-type="{kind}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#43162b"><meta name="page-type" content="{kind}"><meta name="site-kind" content="other"><meta name="description" content="{text(description)}"><title>{text(title)} — Ruchs</title><link rel="icon" href="/cdn/shop/files/IMG_3941_48cfe4a1-81fc-463d-9b5d-aed2d550434b.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="/remap.css"><link rel="stylesheet" href="/react-bits.css"><link rel="stylesheet" href="/tryon.css"><link rel="stylesheet" href="/live-tryon.css"><script defer src="/remap.js"></script><script defer src="/react-bits.js"></script><script defer src="/tryon.js"></script><script defer src="/live-tryon.js"></script></head><body>{header()}<main id="main">{body}</main>{footer()}</body></html>'''
 
 
 def home() -> str:
@@ -222,6 +223,11 @@ def main() -> None:
     shutil.copyfile(ROOT / "scripts" / "remap.css", DIST / "remap.css")
     shutil.copyfile(ROOT / "scripts" / "tryon.css", DIST / "tryon.css")
     shutil.copyfile(ROOT / "scripts" / "remap.js", DIST / "remap.js")
+    grain = base64.b64encode((ROOT / "assets" / "react-bits" / "grain.webp").read_bytes()).decode("ascii")
+    react_bits_css = (ROOT / "scripts" / "react-bits.css").read_text(encoding="utf-8")
+    (DIST / "react-bits.css").write_text(react_bits_css.replace("__REACT_BITS_GRAIN__", f"data:image/webp;base64,{grain}"), encoding="utf-8")
+    shutil.copyfile(ROOT / "scripts" / "react-bits.js", DIST / "react-bits.js")
+    shutil.copyfile(ROOT / "third_party" / "REACT_BITS_LICENSE.md", DIST / "react-bits-license.txt")
     shutil.copyfile(ROOT / "scripts" / "tryon.js", DIST / "tryon.js")
     shutil.copyfile(ROOT / "scripts" / "live-tryon.css", DIST / "live-tryon.css")
     shutil.copyfile(ROOT / "scripts" / "live-tryon.js", DIST / "live-tryon.js")

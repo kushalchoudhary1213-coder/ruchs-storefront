@@ -2,6 +2,8 @@
 
 A redesigned storefront built from the public [Ruchs](https://www.ruchs.in/) catalog captured on 18 November 2026. The 20 products, collection membership, published information, and original photography are retained. The layout and interactions have been remade with an editorial visual system. Product pages include photo and live camera virtual try-on adapted from the sibling Drape project. The generated pages and same-origin APIs run on Cloudflare Workers.
 
+The motion layer adapts React Bits `AnimatedContent`, `GlareHover`, and `SpotlightCard` patterns for the static storefront, and uses the supplied grain texture on the dark editorial panels. Animations respect reduced-motion preferences and have no runtime dependency on React. See [the React Bits license](third_party/REACT_BITS_LICENSE.md) for the attached package's terms and attribution.
+
 ## Run locally
 
 ```powershell

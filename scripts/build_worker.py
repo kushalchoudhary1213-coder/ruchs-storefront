@@ -10,9 +10,9 @@ for path in dist.rglob("index.html"):
     route = "/" if path == dist / "index.html" else "/" + path.parent.relative_to(dist).as_posix() + "/"
     pages[route] = path.read_text(encoding="utf-8")
 
-asset_types = {".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".json": "application/json; charset=utf-8"}
+asset_types = {".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".json": "application/json; charset=utf-8", ".txt": "text/plain; charset=utf-8"}
 assets = {}
-for name in ("remap.css", "remap.js", "tryon.css", "tryon.js", "live-tryon.css", "live-tryon.js", "decart-live.js", "products.json"):
+for name in ("remap.css", "remap.js", "react-bits.css", "react-bits.js", "react-bits-license.txt", "tryon.css", "tryon.js", "live-tryon.css", "live-tryon.js", "decart-live.js", "products.json"):
     path = dist / name
     assets["/" + name] = {"type": asset_types[path.suffix], "content": path.read_text(encoding="utf-8")}
 
