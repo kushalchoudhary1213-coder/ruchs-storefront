@@ -1,6 +1,6 @@
-# Ruchs storefront clone
+# Ruchs storefront remap
 
-A static snapshot of the public [Ruchs](https://www.ruchs.in/) storefront, captured on 18 November 2026. It contains the original page markup, theme files, product imagery, and hero videos for 42 accessible routes. The supplied Next.js template was used as the starting workspace; static output is served from `dist/` to preserve the Shopify theme's appearance.
+A redesigned static storefront built from the public [Ruchs](https://www.ruchs.in/) catalog captured on 18 November 2026. The 20 products, collection membership, published information, and original photography are retained. The layout and interactions have been remade with an editorial visual system. The supplied Next.js template was the starting workspace; the deployed output is static HTML from `dist/`.
 
 ## Run locally
 
@@ -8,6 +8,6 @@ A static snapshot of the public [Ruchs](https://www.ruchs.in/) storefront, captu
 npm run dev
 ```
 
-Open <http://localhost:4173/>. To refresh the snapshot from the public storefront, run `npm run build` (requires Python, `requests`, and `beautifulsoup4`).
+Open <http://localhost:4173/>. Run `npm run build` to regenerate all pages from `data/content.json` and `dist/products.json`. This requires Python and `beautifulsoup4`.
 
-The product pages, collections, and informational routes are local. Cart changes are saved in the browser. Shopify account, checkout, payments, newsletter submission, and live inventory require the original store backend.
+The product pages, collections, search, wishlist, and informational routes are local. Cart and wishlist changes are saved in the browser. Shopify account, checkout, payments, and live inventory require the original store backend.

@@ -28,7 +28,8 @@
   },
   "scripts": {
     "dev": "python -m http.server 4173 --directory dist",
-    "build": "python scripts/mirror.py",
+    "build": "python scripts/remap.py",
+    "snapshot": "python scripts/mirror.py",
     "start": "python -m http.server 4173 --directory dist",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
