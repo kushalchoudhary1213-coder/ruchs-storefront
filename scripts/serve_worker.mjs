@@ -15,7 +15,11 @@ http.createServer(async (incoming, outgoing) => {
     body: chunks.length ? Buffer.concat(chunks) : undefined,
   });
   try {
-    const response = await worker.fetch(request, {GENLOOK_API_KEY: process.env.GENLOOK_API_KEY, DB});
+    const response = await worker.fetch(request, {
+      GENLOOK_API_KEY: process.env.GENLOOK_API_KEY,
+      DECART_API_KEY: process.env.DECART_API_KEY,
+      DB,
+    });
     outgoing.writeHead(response.status, Object.fromEntries(response.headers));
     if (response.body) Readable.fromWeb(response.body).pipe(outgoing);
     else outgoing.end();

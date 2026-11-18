@@ -4,6 +4,10 @@ const dailyLimit = 5;
 const visitorLimit = 2;
 const providerPauseMinutes = 15;
 const providerUnavailableMessage = 'Virtual try-on is paused until Genlook credits are available.';
+const liveModel = 'lucy-vton-3.6';
+const liveSessionSeconds = 30;
+const liveDailyLimit = 5;
+const liveVisitorLimit = 2;
 
 function json(value, status = 200) {
   return new Response(JSON.stringify(value), {
@@ -64,6 +68,107 @@ async function visitorHash(request, key, day) {
   const bytes = new TextEncoder().encode(`${key}:${day}:${identity}`);
   const digest = await crypto.subtle.digest('SHA-256', bytes);
   return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function liveStatus(request, env) {
+  if (!env.DECART_API_KEY || !env.DB) return json({available: false, reason: 'Live try-on is unavailable right now.'});
+  try {
+    const day = new Date().toISOString().slice(0, 10);
+    const visitor = await visitorHash(request, env.DECART_API_KEY, day);
+    const global = await env.DB.prepare('SELECT count FROM tryon_quota WHERE day = ? AND scope = ? AND subject = ?')
+      .bind(day, 'live-global', 'all').first();
+    const individual = await env.DB.prepare('SELECT count FROM tryon_quota WHERE day = ? AND scope = ? AND subject = ?')
+      .bind(day, 'live-visitor', visitor).first();
+    if (Number(global?.count || 0) >= liveDailyLimit) {
+      return json({available: false, reason: 'Today’s live previews are full. Please try again tomorrow.'});
+    }
+    if (Number(individual?.count || 0) >= liveVisitorLimit) {
+      return json({available: false, reason: 'You have used today’s live previews. Please try again tomorrow.'});
+    }
+    return json({available: true, reason: null, maxSessionSeconds: liveSessionSeconds});
+  } catch {
+    return json({available: false, reason: 'Live try-on is unavailable right now.'});
+  }
+}
+
+async function liveGarment(request) {
+  const url = new URL(request.url);
+  const product = productImages[url.searchParams.get('handle')];
+  const index = Number(url.searchParams.get('image_index'));
+  if (!product || !Number.isInteger(index) || index < 0 || index >= product.images.length) {
+    return json({error: 'Choose a valid product photo.'}, 400);
+  }
+  try {
+    const source = new URL(product.images[index]);
+    if (source.protocol !== 'https:' || source.hostname !== 'cdn.shopify.com') throw new Error('invalid-garment-url');
+    const response = await timedFetch(source, {}, 20000);
+    if (!response.ok) throw new Error('garment-unavailable');
+    const type = response.headers.get('content-type')?.split(';')[0] || 'image/jpeg';
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(type)) throw new Error('invalid-garment-type');
+    const bytes = await response.arrayBuffer();
+    if (bytes.byteLength > 5_000_000) return json({error: 'This product photo is too large for live try-on.'}, 413);
+    return new Response(bytes, {headers: {'content-type': type, 'cache-control': 'public, max-age=3600'}});
+  } catch (error) {
+    console.error('Live garment unavailable', error?.message || 'unknown');
+    return json({error: 'Could not load this product photo.'}, 502);
+  }
+}
+
+async function createLiveToken(request, env) {
+  if (!env.DECART_API_KEY || !env.DB) return json({error: 'Live try-on is unavailable right now.'}, 503);
+  const origin = new URL(request.url).origin;
+  if (request.headers.get('origin') !== origin) return json({error: 'This request must come from the storefront.'}, 403);
+  let fields;
+  try { fields = await request.json(); }
+  catch { return json({error: 'Choose a valid product.'}, 400); }
+  if (!productImages[fields?.handle]) return json({error: 'Choose a valid product.'}, 400);
+
+  const day = new Date().toISOString().slice(0, 10);
+  let visitor;
+  try {
+    visitor = await visitorHash(request, env.DECART_API_KEY, day);
+    if (!await reserveQuota(env.DB, day, 'live-visitor', visitor, liveVisitorLimit)) {
+      return json({error: 'You have used today’s live previews. Please try again tomorrow.'}, 429);
+    }
+    if (!await reserveQuota(env.DB, day, 'live-global', 'all', liveDailyLimit)) {
+      await refundQuota(env.DB, day, 'live-visitor', visitor);
+      return json({error: 'Today’s live previews are full. Please try again tomorrow.'}, 429);
+    }
+  } catch (error) {
+    console.error('Live quota unavailable', error?.message || 'unknown');
+    return json({error: 'Live try-on is unavailable right now.'}, 503);
+  }
+
+  try {
+    const response = await timedFetch('https://api.decart.ai/v1/client/tokens', {
+      method: 'POST',
+      headers: {'x-api-key': env.DECART_API_KEY, 'content-type': 'application/json'},
+      body: JSON.stringify({
+        expiresIn: 30,
+        allowedModels: [liveModel],
+        allowedOrigins: [origin],
+        constraints: {realtime: {maxSessionDuration: liveSessionSeconds}},
+      }),
+    }, 20000);
+    if (!response.ok) {
+      console.error('Decart token status', response.status);
+      await refundQuota(env.DB, day, 'live-visitor', visitor);
+      await refundQuota(env.DB, day, 'live-global', 'all');
+      const message = response.status === 402 ? 'Decart credits are unavailable right now.'
+        : response.status === 401 || response.status === 403 ? 'The Decart key could not authorize live try-on.'
+        : 'Could not start live try-on. Please try again.';
+      return json({error: message}, 503);
+    }
+    const data = await response.json();
+    const apiKey = data.apiKey || data.token;
+    if (typeof apiKey !== 'string' || !apiKey) throw new Error('invalid-client-token');
+    return json({apiKey, maxSessionSeconds: liveSessionSeconds});
+  } catch (error) {
+    console.error('Decart token unavailable', error?.message || 'unknown');
+    await refundQuota(env.DB, day, 'live-visitor', visitor).catch(() => {});
+    await refundQuota(env.DB, day, 'live-global', 'all').catch(() => {});
+    return json({error: 'Could not start live try-on. Please try again.'}, 502);
+  }
 }
 
 async function tryOn(request, env) {
@@ -178,6 +283,9 @@ async function tryOn(request, env) {
 export default {
   async fetch(request, env) {
     const path = new URL(request.url).pathname;
+    if (path === '/api/live/status' && request.method === 'GET') return liveStatus(request, env);
+    if (path === '/api/live/garment' && request.method === 'GET') return liveGarment(request);
+    if (path === '/api/live/token' && request.method === 'POST') return createLiveToken(request, env);
     if (path === '/api/try-on/status' && request.method === 'GET') {
       if (!env.GENLOOK_API_KEY || !env.DB) return json({available: false, reason: 'Try-on is unavailable right now.'});
       try {
