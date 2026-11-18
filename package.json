@@ -27,10 +27,10 @@
     "node": ">=24"
   },
   "scripts": {
-    "dev": "python -m http.server 4173 --directory dist",
-    "build": "python scripts/remap.py",
+    "dev": "node scripts/serve_worker.mjs",
+    "build": "python scripts/remap.py && python scripts/build_worker.py",
     "snapshot": "python scripts/mirror.py",
-    "start": "python -m http.server 4173 --directory dist",
+    "start": "node scripts/serve_worker.mjs",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "check": "npm run lint && npm run typecheck && npm run build"
