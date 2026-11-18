@@ -37,6 +37,10 @@ next-env.d.ts
 # Vercel
 .vercel
 
+# Cloudflare build output
+.wrangler/
+.wrangler-dry-run/
+
 # Local settings (not project config)
 .claude/settings.local.json
 

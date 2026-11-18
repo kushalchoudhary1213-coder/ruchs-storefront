@@ -17,6 +17,16 @@ export function createLocalQuotaDb() {
               counters.set(key, count + 1);
               return {count: count + 1};
             },
+            async run() {
+              const [day, scope, subject] = args;
+              if (sql.trimStart().startsWith('UPDATE')) {
+                const key = [day, scope, subject].join(':');
+                counters.set(key, Math.max(0, (counters.get(key) || 0) - 1));
+              } else if (sql.includes("'provider', 'genlook'")) {
+                counters.set([day, 'provider', 'genlook'].join(':'), args[1]);
+              }
+              return {success: true};
+            },
           };
         },
       };

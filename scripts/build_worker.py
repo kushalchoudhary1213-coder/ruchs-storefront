@@ -1,4 +1,4 @@
-"""Bundle the generated storefront and its same-origin try-on API for Sites Worker hosting."""
+"""Bundle the generated storefront and same-origin try-on API for Worker hosting."""
 
 import json
 from pathlib import Path

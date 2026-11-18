@@ -1,0 +1,20 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "ruchs-storefront-tryon-2026",
+  "main": "./dist/server/index.js",
+  "account_id": "8e694a3154671ff3377fd267799df420",
+  "compatibility_date": "2026-11-18",
+  "workers_dev": true,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ruchs-tryon-quota",
+      "database_id": "8a996082-d3b1-47a7-a271-a75107fbb975"
+    }
+  ],
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "head_sampling_rate": 1 },
+    "traces": { "enabled": true, "head_sampling_rate": 0.01 }
+  }
+}

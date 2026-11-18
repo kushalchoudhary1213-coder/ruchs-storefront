@@ -4,6 +4,7 @@ import {createLocalQuotaDb} from '../scripts/local_quota.mjs';
 
 const originalFetch = globalThis.fetch;
 const seen = [];
+let providerStatus = 200;
 globalThis.fetch = async (input, options = {}) => {
   const url = String(input);
   seen.push(url);
@@ -11,6 +12,7 @@ globalThis.fetch = async (input, options = {}) => {
     return new Response(new Uint8Array([137, 80, 78, 71, 1, 2]), {headers: {'content-type': 'image/png'}});
   }
   if (url.endsWith('/try-on/sync')) {
+    if (providerStatus === 402) return new Response('Payment required', {status: 402});
     assert.equal(options.headers['x-api-key'], 'test-server-key');
     const data = JSON.parse(options.body.get('data'));
     assert.equal(data.products[0].images[0].classifications.on_model, 'true');
@@ -51,7 +53,20 @@ try {
   assert.equal(seen.length, 15);
   const full = await worker.fetch(new Request('https://site.test/api/try-on/status'), env);
   assert.equal((await full.json()).available, false);
-  console.log('Try-on Worker: provider payload, invalid product, visitor cap, and daily cap passed');
+
+  providerStatus = 402;
+  const creditEnv = {GENLOOK_API_KEY: 'test-server-key', DB: createLocalQuotaDb()};
+  const creditFailure = await worker.fetch(requestFor('192.0.2.10'), creditEnv);
+  assert.equal(creditFailure.status, 503);
+  assert.match((await creditFailure.json()).error, /Genlook credits/);
+  const day = new Date().toISOString().slice(0, 10);
+  const globalCount = await creditEnv.DB.prepare('SELECT count FROM tryon_quota WHERE day = ? AND scope = ? AND subject = ?')
+    .bind(day, 'global', 'all').first();
+  assert.equal(globalCount.count, 0);
+  const paused = await worker.fetch(new Request('https://site.test/api/try-on/status'), creditEnv);
+  assert.equal((await paused.json()).available, false);
+  assert.equal((await worker.fetch(requestFor('192.0.2.10'), creditEnv)).status, 503);
+  console.log('Try-on Worker: provider payload, quotas, and payment pause passed');
 } finally {
   globalThis.fetch = originalFetch;
 }

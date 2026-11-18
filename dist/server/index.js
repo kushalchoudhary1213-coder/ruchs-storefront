@@ -5,6 +5,8 @@ const providerBase = 'https://api.genlook.app/tryon/v1';
 const noStore = {'cache-control': 'no-store'};
 const dailyLimit = 5;
 const visitorLimit = 2;
+const providerPauseMinutes = 15;
+const providerUnavailableMessage = 'Virtual try-on is paused until Genlook credits are available.';
 
 function json(value, status = 200) {
   return new Response(JSON.stringify(value), {
@@ -39,6 +41,25 @@ async function reserveQuota(db, day, scope, subject, limit) {
   return !!row;
 }
 
+async function refundQuota(db, day, scope, subject) {
+  await db.prepare('UPDATE tryon_quota SET count = MAX(0, count - 1) WHERE day = ? AND scope = ? AND subject = ?')
+    .bind(day, scope, subject).run();
+}
+
+async function providerPaused(db, day) {
+  const row = await db.prepare('SELECT count FROM tryon_quota WHERE day = ? AND scope = ? AND subject = ?')
+    .bind(day, 'provider', 'genlook').first();
+  return Number(row?.count || 0) > Math.floor(Date.now() / 60000);
+}
+
+async function pauseProvider(db, day) {
+  const until = Math.floor(Date.now() / 60000) + providerPauseMinutes;
+  await db.prepare(`
+    INSERT INTO tryon_quota (day, scope, subject, count) VALUES (?, 'provider', 'genlook', ?)
+    ON CONFLICT(day, scope, subject) DO UPDATE SET count = excluded.count
+  `).bind(day, until).run();
+}
+
 async function visitorHash(request, key, day) {
   const identity = request.headers.get('oai-authenticated-user-id') ||
     request.headers.get('cf-connecting-ip') ||
@@ -50,6 +71,12 @@ async function visitorHash(request, key, day) {
 
 async function tryOn(request, env) {
   if (!env.GENLOOK_API_KEY || !env.DB) return json({error: 'Try-on is unavailable right now.'}, 503);
+  const day = new Date().toISOString().slice(0, 10);
+  try {
+    if (await providerPaused(env.DB, day)) return json({error: providerUnavailableMessage}, 503);
+  } catch {
+    return json({error: 'Try-on is unavailable right now.'}, 503);
+  }
   if (Number(request.headers.get('content-length') || 0) > 3_500_000) {
     return json({error: 'Please choose a smaller photo.'}, 413);
   }
@@ -68,13 +95,14 @@ async function tryOn(request, env) {
     return json({error: 'Choose a valid product photo.'}, 400);
   }
 
+  let visitor;
   try {
-    const day = new Date().toISOString().slice(0, 10);
-    const visitor = await visitorHash(request, env.GENLOOK_API_KEY, day);
+    visitor = await visitorHash(request, env.GENLOOK_API_KEY, day);
     if (!await reserveQuota(env.DB, day, 'visitor', visitor, visitorLimit)) {
       return json({error: 'You have used today’s try-on previews. Please try again tomorrow.'}, 429);
     }
     if (!await reserveQuota(env.DB, day, 'global', 'all', dailyLimit)) {
+      await refundQuota(env.DB, day, 'visitor', visitor);
       return json({error: 'Today’s try-on previews are full. Please try again tomorrow.'}, 429);
     }
   } catch (error) {
@@ -108,6 +136,14 @@ async function tryOn(request, env) {
     form.append('product', new File([garmentBytes], 'product-image', {type: garmentType}));
     const headers = {'x-api-key': env.GENLOOK_API_KEY};
     const response = await timedFetch(`${providerBase}/try-on/sync`, {method: 'POST', headers, body: form}, 110000);
+    if (response.status === 402) {
+      await Promise.all([
+        refundQuota(env.DB, day, 'visitor', visitor),
+        refundQuota(env.DB, day, 'global', 'all'),
+        pauseProvider(env.DB, day),
+      ]);
+      return json({error: providerUnavailableMessage}, 503);
+    }
     if (![200, 201, 202].includes(response.status)) {
       console.error('Genlook try-on status', response.status);
       return json({error: 'Could not create your preview. Please try again.'}, 502);
@@ -149,6 +185,7 @@ export default {
       if (!env.GENLOOK_API_KEY || !env.DB) return json({available: false, reason: 'Try-on is unavailable right now.'});
       try {
         const day = new Date().toISOString().slice(0, 10);
+        if (await providerPaused(env.DB, day)) return json({available: false, reason: providerUnavailableMessage});
         const row = await env.DB.prepare('SELECT count FROM tryon_quota WHERE day = ? AND scope = ? AND subject = ?').bind(day, 'global', 'all').first();
         const available = Number(row?.count || 0) < dailyLimit;
         return json({available, reason: available ? null : 'Today’s try-on previews are full. Please try again tomorrow.'});
