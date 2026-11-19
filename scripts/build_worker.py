@@ -12,7 +12,7 @@ for path in dist.rglob("index.html"):
 
 asset_types = {".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".json": "application/json; charset=utf-8", ".txt": "text/plain; charset=utf-8"}
 assets = {}
-for name in ("remap.css", "remap.js", "react-bits.css", "react-bits.js", "react-bits-license.txt", "tryon.css", "tryon.js", "live-tryon.css", "live-tryon.js", "decart-live.js", "products.json"):
+for name in ("remap.css", "remap.js", "react-bits.css", "react-bits.js", "experience.css", "experience.js", "react-bits-license.txt", "tryon.css", "tryon.js", "live-tryon.css", "live-tryon.js", "decart-live.js", "products.json"):
     path = dist / name
     assets["/" + name] = {"type": asset_types[path.suffix], "content": path.read_text(encoding="utf-8")}
 

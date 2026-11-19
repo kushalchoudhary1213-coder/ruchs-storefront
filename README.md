@@ -4,6 +4,8 @@ A redesigned storefront built from the public [Ruchs](https://www.ruchs.in/) cat
 
 The motion layer adapts React Bits `AnimatedContent`, `GlareHover`, and `SpotlightCard` patterns for the static storefront, and uses the supplied grain texture on the dark editorial panels. Animations respect reduced-motion preferences and have no runtime dependency on React. See [the React Bits license](third_party/REACT_BITS_LICENSE.md) for the attached package's terms and attribution.
 
+The homepage also has an interactive 3D lookbook made from original Ruchs product photographs. It presents image panels in depth; it is not a 3D garment model or fit simulation. The campaign film is cropped and compressed from the Ruchs catalog's own woodland fashion video so its older embedded discount claim is excluded. The 8-second, muted clip loads near its section, pauses offscreen, has a manual play/pause control, and does not autoplay for visitors who prefer reduced motion. Cloudflare serves the video and poster as static assets from `dist/static`.
+
 ## Run locally
 
 ```powershell

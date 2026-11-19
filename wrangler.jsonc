@@ -5,6 +5,7 @@
   "account_id": "8e694a3154671ff3377fd267799df420",
   "compatibility_date": "2026-11-18",
   "workers_dev": true,
+  "assets": { "directory": "./dist/static" },
   "d1_databases": [
     {
       "binding": "DB",

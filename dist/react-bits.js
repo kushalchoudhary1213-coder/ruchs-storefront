@@ -5,7 +5,8 @@
     '.intro-band .wrap', '.section-heading', '.category-card', '.collection-tile',
     '.story-section__image', '.story-section__copy', '.product-card',
     '.values-band .wrap > div', '.closing-story > div', '.page-intro',
-    '.listing-intro', '.product-gallery', '.product-information', '.article-content'
+    '.listing-intro', '.product-gallery', '.product-information', '.article-content',
+    '.campaign-film__copy', '.lookbook3d__copy'
   ].join(', ');
 
   if (!reducedMotion && 'IntersectionObserver' in window) {
