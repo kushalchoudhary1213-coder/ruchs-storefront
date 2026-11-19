@@ -2,9 +2,9 @@
 
 A redesigned storefront built from the public [Ruchs](https://www.ruchs.in/) catalog captured on 18 November 2026. The 20 products, collection membership, published information, and original photography are retained. The layout and interactions have been remade with an editorial visual system. Product pages include photo and live camera virtual try-on adapted from the sibling Drape project. The generated pages and same-origin APIs run on Cloudflare Workers.
 
-The garden edit uses original Ruchs photographs, a shoppable horizontal lookbook, and a three-dimensional study of folded fabric. GSAP ScrollTrigger and Lenis coordinate desktop scrolling. Touch devices use a native horizontal gallery. The Three.js study supports dragging or a turn button, with a still image for reduced motion and devices without WebGL. The campaign panel uses the supplied React Bits grain texture. See [the React Bits license](third_party/REACT_BITS_LICENSE.md).
+The homepage opens with a silent, looping film of garments on a rail, followed by selected Ruchs products and a shoppable lookbook. GSAP ScrollTrigger and Lenis coordinate desktop scrolling. Touch devices use a native horizontal gallery.
 
-Two silent films appear on the homepage. The woodland campaign uses eight seconds from the original Ruchs campaign. The wardrobe film introduces Selected pieces using the supplied 4K garment-rail footage, with separate desktop and phone encodes. Playback follows visibility, respects reduced motion and data-saving preferences, and can be paused manually.
+The opening film uses the supplied 4K garment-rail footage, with separate desktop and phone encodes. It autoplays silently and loops without an on-page pause control.
 
 ## Run locally
 
@@ -22,4 +22,4 @@ The product pages, collections, search, wishlist, and informational routes are l
 
 ## Cloudflare hosting
 
-The public site is [ruchs-storefront-tryon-2026.kushal-ruchs-2026.workers.dev](https://ruchs-storefront-tryon-2026.kushal-ruchs-2026.workers.dev/). Cloudflare serves the generated storefront, locally optimized catalog images, fonts, and films. The Worker handles both try-on modes through a D1 quota database. Build and deploy with `npm run deploy:cloudflare`. The remote database `ruchs-tryon-quota` is bound as `DB`; apply `drizzle/0000_youthful_warbird.sql` to it before the first deployment. Set `GENLOOK_API_KEY` and `DECART_API_KEY` with `wrangler secret put` after deployment. Neither secret is stored in source control. Provider credits are separate from Cloudflare hosting.
+The public site is [myruchs.com](https://myruchs.com/). Cloudflare serves the generated storefront, locally optimized catalog images, fonts, and film. The Worker handles both try-on modes through a D1 quota database. Build and deploy with `npm run deploy:cloudflare`. The remote database `ruchs-tryon-quota` is bound as `DB`; apply `drizzle/0000_youthful_warbird.sql` to it before the first deployment. Set `GENLOOK_API_KEY` and `DECART_API_KEY` with `wrangler secret put` after deployment. Neither secret is stored in source control. Provider credits are separate from Cloudflare hosting.

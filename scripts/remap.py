@@ -80,14 +80,14 @@ def header() -> str:
     return f'''<a class="skip-link" href="#main">Skip to content</a>
     <header class="site-header"><div class="header-inner">
       <button type="button" class="icon-button mobile-menu-button" data-menu-open aria-label="Open menu" aria-expanded="false">{icon('menu')}</button>
-      <nav class="primary-nav" aria-label="Primary"><a href="/collections/all/">Shop</a><a href="/#lookbook">Lookbook</a><a href="/#atelier">Atelier</a></nav>
+      <nav class="primary-nav" aria-label="Primary"><a href="/collections/all/">Shop</a><a href="/#lookbook">Lookbook</a><a href="/#wardrobe">Selected pieces</a></nav>
       <a class="brand" href="/" aria-label="Ruchs home"><span>RUCHS</span><small>BY RUCHI SACHDEVA</small></a>
       <div class="header-actions"><button type="button" class="icon-button" data-search-open aria-label="Search">{icon('search')}</button>
         <a class="icon-button" href="/pages/swym-wishlist/" aria-label="Wishlist">{icon('heart')}</a>
         <button type="button" class="icon-button bag-button" data-cart-open aria-label="Open cart">{icon('bag')}<span class="cart-count" data-cart-count hidden>0</span></button></div>
     </div></header>
     <div class="mobile-menu" id="mobile-menu" hidden><div class="mobile-menu__top"><span>Explore Ruchs</span><button class="icon-button" data-menu-close aria-label="Close menu">{icon('close')}</button></div><nav aria-label="Mobile">
-      <a href="/collections/all/">Shop all {icon('arrow')}</a>{links}<a href="/#lookbook">Lookbook</a><a href="/#atelier">Atelier</a><a href="/pages/swym-wishlist/">Wishlist</a><a href="/pages/about-us/">Our story</a><a href="/pages/contact/">Contact</a></nav></div>
+      <a href="/collections/all/">Shop all {icon('arrow')}</a>{links}<a href="/#lookbook">Lookbook</a><a href="/#wardrobe">Selected pieces</a><a href="/pages/swym-wishlist/">Wishlist</a><a href="/pages/about-us/">Our story</a><a href="/pages/contact/">Contact</a></nav></div>
     <div class="search-panel" id="search-panel" hidden><div class="search-panel__inner"><form action="/search/" role="search"><label for="site-search">Search the collection</label><div><input id="site-search" name="q" type="search" placeholder="Try dresses, sets, skirts…" autocomplete="off"><button type="submit" aria-label="Submit search">{icon('arrow')}</button></div></form><button class="icon-button" data-search-close aria-label="Close search">{icon('close')}</button></div></div>'''
 
 
@@ -106,8 +106,7 @@ def page(title: str, body: str, description: str = "Thoughtfully crafted sustain
     scripts = ["/remap.js"]
     home_resources = ""
     if kind == "home":
-        styles.extend(["/showcase/showcase.css", "/showcase/textile.css"])
-        scripts.append("/experience.js")
+        styles.append("/showcase/showcase.css")
         home_resources = '<script type="module" src="/showcase/showcase-motion.js"></script>'
     if "data-product-handle=" in body:
         styles.extend(["/tryon.css", "/live-tryon.css"])
@@ -157,19 +156,18 @@ def home() -> str:
         ("jasmine-royal-coord-set", "jasmine-blue"), ("wednesday-muse-dress", "wednesday-muse"),
     ]
     body = f'''<div class="showcase" data-showcase>
-    <section class="sc-hero" data-sc-hero aria-labelledby="garden-title">
-      <div class="sc-hero-plate sc-hero-detail">
-        <picture><source media="(max-width: 700px)" srcset="data:image/gif;base64,R0lGODlhAQABAAAAACwAAAAAAQABAAA=">
-        <img data-sc-parallax src="/showcase/zoya-detail.webp" srcset="/showcase/zoya-detail-small.webp 640w, /showcase/zoya-detail.webp 1200w" sizes="58vw" width="1200" height="1600" alt="" fetchpriority="high"></picture>
+    <section class="sc-studio" id="wardrobe" aria-labelledby="studio-title">
+      <div class="sc-wardrobe-frame">
+        <video autoplay muted loop playsinline preload="auto" poster="/media/wardrobe-poster.webp" aria-label="A close look along a rail of garments on wooden hangers">
+          <source media="(max-width: 700px)" src="/media/wardrobe-mobile.mp4" type="video/mp4">
+          <source src="/media/wardrobe-film.mp4" type="video/mp4">
+        </video>
+        <div class="sc-wardrobe-copy"><h1 id="studio-title" data-sc-title aria-label="Selected pieces"><span class="sc-word" aria-hidden="true"><span>Selected</span></span> <em class="sc-word" aria-hidden="true"><span>pieces.</span></em></h1>
+          <a class="sc-hero-shop" data-sc-magnetic href="/collections/all/"><span>Explore the collection</span> {icon("arrow")}</a>
+        </div>
       </div>
-      <div class="sc-hero-plate sc-hero-garden">
-        <img data-sc-parallax src="/showcase/zoya-garden.webp" srcset="/showcase/zoya-garden-small.webp 640w, /showcase/zoya-garden.webp 1000w" sizes="(max-width: 700px) 100vw, 42vw" alt="The Zoya Eclipse Dress photographed in a sunlit garden" width="1000" height="1334" fetchpriority="high">
-      </div>
-      <div class="sc-hero-copy">
-        <h1 id="garden-title" data-sc-title aria-label="The garden edit"><span class="sc-word" aria-hidden="true"><span>The garden</span></span> <em class="sc-word" aria-hidden="true"><span>edit.</span></em></h1>
-        <a class="sc-hero-shop" data-sc-magnetic href="/collections/all/"><span>Explore the collection</span> {icon("arrow")}</a>
-      </div>
-      <a class="sc-hero-credit" href="/products/zoya-eclipse-dress/"><span>Featured look</span>Zoya Eclipse Dress {icon("arrow")}</a>
+      <div class="sc-pieces">{''.join(home_piece(*piece) for piece in pieces)}</div>
+      <a class="sc-pieces-all sc-underline" href="/collections/all/"><span>Shop all pieces</span> {icon("arrow")}</a>
     </section>
     <nav class="sc-category-nav" aria-label="Shop by category">
       <span>Shop by category</span>
@@ -191,41 +189,8 @@ def home() -> str:
         <div class="sc-progress-rule" aria-hidden="true"><span data-sc-progress></span></div>
       </div>
     </section>
-    <section class="sc-film" id="film" data-sc-film aria-labelledby="film-title">
-      <div class="sc-film-copy">
-        <p class="sc-label">Campaign film <span aria-hidden="true">/</span> 00:08</p>
-        <h2 id="film-title">A walk in<br><em>the woods.</em></h2>
-        <p>White fabric catches the light and falls back into shadow with each step.</p>
-        <a class="sc-underline" data-sc-magnetic href="/collections/dresses/"><span>Shop dresses</span> {icon("arrow")}</a>
-      </div>
-      <div class="sc-film-frame"><div class="sc-film-screen" data-sc-film-parallax>
-        <video data-campaign-video src="/media/ruchs-campaign.mp4" poster="/media/ruchs-campaign-poster.jpg" muted loop playsinline preload="none" aria-label="A model walking through the woods in a white Ruchs dress"></video>
-      </div>
-      <button class="sc-film-toggle" type="button" data-campaign-toggle hidden>Play film</button></div>
-    </section>
-    <section class="sc-atelier" id="atelier" aria-labelledby="atelier-title">
-      <div class="sc-atelier-copy"><p class="sc-label">Atelier / Interactive study</p><h2 id="atelier-title">The shape<br>of a <em>fold.</em></h2>
-      <p>A study in drape and light. Follow a ridge of plum fabric from a bright edge into a deep, soft crease.</p>
-      <a class="sc-underline" data-sc-magnetic href="/pages/about-us/"><span>Our story</span> {icon("arrow")}</a></div>
-      <figure class="textile-study" data-textile-study>
-        <div class="textile-frame" data-textile-frame><img class="textile-poster" src="/showcase/drape-study.webp" alt="A sculptural square of plum fabric gathered into flowing folds" width="900" height="670" loading="lazy"></div>
-        <figcaption><span>Fabric in motion</span><button type="button" data-textile-turn hidden>Turn the drape</button></figcaption>
-      </figure>
-    </section>
-    <section class="sc-studio" id="wardrobe" aria-labelledby="studio-title">
-      <div class="sc-wardrobe-frame">
-        <video data-campaign-video muted loop playsinline preload="none" poster="/media/wardrobe-poster.webp" aria-label="A close look along a rail of garments on wooden hangers">
-          <source media="(max-width: 700px)" src="/media/wardrobe-mobile.mp4" type="video/mp4">
-          <source src="/media/wardrobe-film.mp4" type="video/mp4">
-        </video>
-        <div class="sc-wardrobe-copy"><h2 id="studio-title">Selected <em>pieces.</em></h2>
-          <a class="sc-underline" href="/collections/all/"><span>Shop all pieces</span> {icon("arrow")}</a>
-        </div>
-        <button class="sc-film-toggle" type="button" data-campaign-toggle hidden>Play film</button>
-      </div>
-      <div class="sc-pieces">{''.join(home_piece(*piece) for piece in pieces)}</div>
-    </section></div>'''
-    return page("The garden edit", body, "Shop the Ruchs garden edit, explore the lookbook, and watch the collection in motion.", kind="home")
+    </div>'''
+    return page("Selected pieces", body, "Explore Ruchs selected pieces and shoppable looks.", kind="home")
 
 
 def collection_index() -> str:
@@ -342,12 +307,10 @@ def main() -> None:
     react_bits_css = (ROOT / "scripts" / "react-bits.css").read_text(encoding="utf-8")
     (DIST / "react-bits.css").write_text(react_bits_css.replace("__REACT_BITS_GRAIN__", f"data:image/webp;base64,{grain}"), encoding="utf-8")
     shutil.copyfile(ROOT / "scripts" / "react-bits.js", DIST / "react-bits.js")
-    shutil.copyfile(ROOT / "scripts" / "experience.css", DIST / "experience.css")
-    shutil.copyfile(ROOT / "scripts" / "experience.js", DIST / "experience.js")
     shutil.copyfile(ROOT / "third_party" / "REACT_BITS_LICENSE.md", DIST / "react-bits-license.txt")
     media_output = DIST / "static" / "media"
     media_output.mkdir(parents=True, exist_ok=True)
-    for name in ("ruchs-campaign.mp4", "ruchs-campaign-poster.jpg", "wardrobe-film.mp4", "wardrobe-mobile.mp4", "wardrobe-poster.webp"):
+    for name in ("wardrobe-film.mp4", "wardrobe-mobile.mp4", "wardrobe-poster.webp"):
         shutil.copyfile(ROOT / "assets" / "media" / name, media_output / name)
     shutil.copyfile(ROOT / "scripts" / "tryon.js", DIST / "tryon.js")
     shutil.copyfile(ROOT / "scripts" / "live-tryon.css", DIST / "live-tryon.css")

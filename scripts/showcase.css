@@ -1,8 +1,7 @@
-/* Ruchs seasonal edit */
+/* Ruchs fashion showcase */
 .showcase {
   --sc-paper: #f6f1e7;
   --sc-ink: #241e1c;
-  --sc-forest: #30382d;
   --sc-edge: clamp(20px, 4.4vw, 84px);
   --sc-line: #c9beb1;
   background: var(--sc-paper);
@@ -12,94 +11,49 @@
 .showcase h2 { font-size: clamp(52px, 6.4vw, 108px); line-height: .96; }
 .showcase a { text-decoration: none; }
 .showcase section[id] { scroll-margin-top: 4px; }
-.showcase .sc-label, .sc-category-nav > span, .sc-look-caption p,
-.sc-hero-credit > span, .sc-film-toggle {
-  font: 600 10px/1.4 var(--body);
-  letter-spacing: .14em;
-  text-transform: uppercase;
+.sc-studio { padding-bottom: clamp(70px, 8vw, 130px); }
+.sc-wardrobe-frame {
+  position: relative; isolation: isolate; display: flex; align-items: flex-end;
+  min-height: 570px; height: min(850px, calc(100svh - 72px));
+  margin-bottom: clamp(32px, 5vw, 78px);
+  overflow: hidden; background: #342a25; color: #fffaef;
 }
-.sc-hero {
-  display: grid;
-  grid-template-columns: 58fr 42fr;
-  position: relative;
-  isolation: isolate;
-  height: clamp(480px, calc(95svh - 74px), 900px);
-  min-height: 0;
-  background: #302b23;
-  color: #fffaf0;
+.sc-wardrobe-frame video, .sc-wardrobe-frame::after { position: absolute; inset: 0; width: 100%; height: 100%; }
+.sc-wardrobe-frame video { object-fit: cover; object-position: center 48%; z-index: -2; }
+.sc-wardrobe-frame::after {
+  content: ''; z-index: -1; pointer-events: none;
+  background: linear-gradient(12deg, rgba(16,11,10,.86), rgba(17,12,11,.32) 49%, rgba(17,12,11,.02) 82%);
 }
-.sc-hero-plate { position: relative; overflow: hidden; }
-.sc-hero-plate picture { display: contents; }
-.sc-hero-plate img {
-  width: 100%;
-  height: 116%;
-  max-width: none;
-  position: absolute;
-  top: -8%;
-  object-fit: cover;
+.sc-wardrobe-copy { width: 100%; padding: 0 var(--sc-edge) clamp(40px, 7vh, 86px); }
+.sc-wardrobe-copy h1 {
+  max-width: 980px; margin: 0 0 28px;
+  font: 400 clamp(88px, 11vw, 184px)/.78 var(--display);
+  letter-spacing: -.06em; color: #fffaf0;
 }
-.sc-hero-detail img { object-position: 49% 35%; }
-.sc-hero-garden { border-left: 2px solid var(--sc-paper); }
-.sc-hero-garden img { object-position: 52% 36%; }
-.sc-hero-plate::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(0deg, rgba(18,10,8,.70), rgba(15,12,9,.04) 47%);
-  pointer-events: none;
-}
-.sc-hero-detail::after {
-  background: linear-gradient(10deg, rgba(21,12,9,.79), rgba(22,12,8,.11) 68%);
-}
-.sc-hero-copy {
-  position: absolute;
-  left: var(--sc-edge);
-  bottom: clamp(31px, 6.1vh, 72px);
-  z-index: 1;
-  max-width: 70%;
-}
-.showcase .sc-hero-copy h1 {
-  color: #fffaef;
-  font-family: var(--display);
-  font-size: clamp(70px, 9.65vw, 175px);
-  font-weight: 400;
-  letter-spacing: -.058em;
-  line-height: .86;
-  margin: 0 0 26px -.045em;
-}
-.sc-word { display: block; padding: .05em .11em .075em .05em; margin: -.05em -.11em -.055em -.05em; }
-.sc-title-entering .sc-word { overflow: hidden; }
+.sc-word { display: block; padding: .06em .09em .10em .04em; margin: -.06em -.09em -.07em -.04em; }
 .sc-word > span { display: inline-block; }
-.sc-hero-copy em.sc-word { padding-left: .39em; }
+.sc-wardrobe-copy em.sc-word { padding-left: .38em; }
+.sc-title-entering .sc-word { overflow: hidden; }
 .sc-hero-shop, .sc-underline, .sc-category-all {
-  display: inline-flex;
-  gap: 18px;
-  align-items: center;
-  justify-content: space-between;
+  display: inline-flex; gap: 18px; align-items: center; justify-content: space-between;
   font: 600 11px/1.4 var(--body);
 }
 .sc-hero-shop {
-  min-height: 47px;
-  padding: 0 21px;
-  background: #fbf7ed;
-  color: var(--sc-ink);
-  border: 1px solid #fbf7ed;
-  transition: background .2s, color .2s;
+  min-height: 48px; padding: 0 21px; background: #fbf7ed; color: var(--sc-ink);
+  border: 1px solid #fbf7ed; transition: background .2s, color .2s;
 }
 .sc-hero-shop:hover { background: var(--sc-ink); color: #fbf7ed; }
-.sc-hero-shop svg, .sc-underline svg, .sc-category-all svg, .sc-hero-credit svg { width: 16px; height: 16px; }
-.sc-hero-credit {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: 2px 16px;
-  position: absolute;
-  right: var(--sc-edge);
-  bottom: clamp(31px, 6.1vh, 72px);
-  font: 500 clamp(22px, 2vw, 35px)/1.05 var(--display);
-}
-.sc-hero-credit > span { grid-column: 1/-1; font-size: 9px; letter-spacing: .18em; }
-.sc-hero-credit svg { transform: rotate(-40deg); }
+.sc-hero-shop svg, .sc-underline svg, .sc-category-all svg { width: 16px; height: 16px; }
+.sc-underline { min-height: 44px; border-bottom: 1px solid currentColor; }
+.sc-pieces-all { margin: clamp(22px, 3vw, 42px) var(--sc-edge) 0; }
+.sc-pieces { margin-inline: var(--sc-edge); display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: clamp(10px, 1.55vw, 30px); }
+.sc-piece-photo { position: relative; display: block; aspect-ratio: 3/4; overflow: hidden; background: #e7dbc9; }
+.sc-piece-photo img { transition: transform 500ms ease; }
+.sc-piece-photo:hover img { transform: scale(1.035); }
+.sc-piece-caption { align-items: flex-start; padding-top: 11px; gap: 4px; }
+.sc-piece-caption h3 { font: 500 clamp(21px, 2vw, 31px)/1.05 var(--display); }
+.sc-piece-caption p { font: 500 12px var(--body); color: #554b45; margin: 7px 0 0; }
+.sc-piece-caption .wish-button { min-width: 40px; width: 40px; height: 44px; margin: -5px -4px 0 0; }
 .sc-category-nav {
   display: flex;
   align-items: center;
@@ -121,7 +75,7 @@
 }
 .sc-section-heading h2 { font-size: clamp(48px, 5.25vw, 92px); }
 .sc-rail-controls { display: flex; gap: 8px; }
-.sc-rail-controls button, .sc-film-toggle {
+.sc-rail-controls button {
   min-width: 44px; min-height: 44px;
   border: 1px solid currentColor; color: inherit; background: transparent;
 }
@@ -154,47 +108,10 @@
 .sc-look-caption svg { width: 15px; height: 15px; transform: rotate(-40deg); }
 .sc-progress-rule { background: var(--sc-line); height: 1px; margin: 16px var(--sc-edge) 0; }
 .sc-progress-rule > span { display: block; width: 100%; height: 1px; background: var(--sc-ink); transform-origin: left; transform: scaleX(.333); }
-.sc-film { display: grid; grid-template-columns: 1fr .94fr; align-items: center; gap: clamp(20px, 4vw, 100px); background: var(--sc-forest); color: #f8f4e6; padding: clamp(48px, 6.5vw, 112px) var(--sc-edge); }
-.sc-label { margin: 0 0 clamp(18px, 2.3vw, 38px); }
-.sc-label span { margin: 0 .5em; }
-.sc-film-copy, .sc-atelier-copy { justify-self: center; }
-.sc-film-copy h2, .sc-atelier-copy h2 { font-size: clamp(56px, 7.5vw, 134px); line-height: .88; font-weight: 400; }
-.sc-film-copy > p:not(.sc-label), .sc-atelier-copy > p:not(.sc-label) {
-  margin: 24px 0 18px; max-width: 32ch; font-size: clamp(13px, 1.03vw, 17px); line-height: 1.75;
-}
-.sc-underline { min-height: 44px; border-bottom: 1px solid currentColor; }
-.sc-film-frame { position: relative; height: clamp(390px, 47vw, 695px); width: 100%; overflow: hidden; background: #34382f; }
-.sc-film-screen { position: absolute; inset: -5% 0; }
-.sc-film-screen video { width: 100%; height: 100%; display: block; object-fit: cover; object-position: 42% 50%; }
-.sc-film-toggle { position: absolute; left: 18px; bottom: 18px; padding: 10px 16px; border-radius: 30px; background: rgba(15,18,12,.64); color: #fff; }
-.sc-film-toggle:hover { background: #151910; }
-.sc-film-toggle[hidden] { display: none; }
-.sc-film { background-image: url('/showcase/grain.webp'); background-size: 430px; background-blend-mode: soft-light; }
-.sc-atelier { display: grid; grid-template-columns: .72fr 1fr; gap: clamp(26px, 6vw, 115px); align-items: center; padding: clamp(68px, 8vw, 145px) var(--sc-edge); background: #eee6d9; }
-.sc-atelier figure { min-width: 0; margin: 0; }
-.sc-studio { padding: 0 0 clamp(68px, 8vw, 130px); }
-.sc-wardrobe-frame {
-  position: relative; isolation: isolate; display: flex; align-items: flex-end;
-  height: clamp(310px, 34vw, 540px); margin-bottom: clamp(24px, 3vw, 54px);
-  background: #363028; color: #fffaef; overflow: hidden;
-}
-.sc-wardrobe-frame video, .sc-wardrobe-frame::after { position: absolute; inset: 0; width: 100%; height: 100%; }
-.sc-wardrobe-frame video { object-fit: cover; object-position: center 45%; z-index: -2; }
-.sc-wardrobe-frame::after { content: ''; z-index: -1; pointer-events: none; background: linear-gradient(15deg, rgba(17,13,10,.83), rgba(17,13,10,.25) 54%, transparent 85%); }
-.sc-wardrobe-copy { padding: 38px var(--sc-edge); }
-.sc-wardrobe-copy h2 { color: inherit; font-size: clamp(55px, 6.8vw, 118px); font-weight: 400; }
-.sc-wardrobe-frame .sc-film-toggle { left: auto; right: var(--sc-edge); bottom: 38px; }
-.sc-pieces { margin-inline: var(--sc-edge); display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: clamp(10px, 1.55vw, 30px); }
-.sc-piece-photo { position: relative; display: block; aspect-ratio: 3/4; overflow: hidden; background: #e7dbc9; }
-.sc-piece-photo img { transition: transform 500ms ease; }
-.sc-piece-photo:hover img { transform: scale(1.035); }
-.sc-piece-caption { align-items: flex-start; padding-top: 11px; gap: 4px; }
-.sc-piece-caption h3 { font: 500 clamp(21px, 2vw, 31px)/1.05 var(--display); }
-.sc-piece-caption p { font: 500 12px var(--body); color: #554b45; margin: 7px 0 0; }
-.sc-piece-caption .wish-button { min-width: 40px; width: 40px; height: 44px; margin: -5px -4px 0 0; }
 @media (min-width: 701px) and (max-height: 610px) {
   .sc-pin { padding-block: 16px; }
   .sc-look-plates { height: min(42svh, 285px); }
+  .sc-wardrobe-frame { min-height: 420px; }
 }
 @media (max-width: 850px) {
   .sc-category-nav { flex-wrap: wrap; gap: 4px 24px; }
@@ -205,18 +122,13 @@
 }
 @media (max-width: 700px) {
   .showcase { --sc-edge: 20px; }
-  .sc-hero { grid-template-columns: 1fr; height: clamp(475px, calc(90svh - 60px), 785px); }
-  .sc-hero-detail { display: none; }
-  .sc-hero-garden { border: 0; }
-  .sc-hero-garden img { object-position: 52% 35%; }
-  .sc-hero-garden::after { background: linear-gradient(0deg, rgba(19,10,9,.84), rgba(20,14,10,.48) 27%, transparent 66%); }
-  .sc-hero-copy { max-width: calc(100% - 40px); bottom: 65px; }
-  .showcase .sc-hero-copy h1 { font-size: clamp(72px, 17vw, 115px); margin-bottom: 18px; }
-  .sc-hero-copy em.sc-word { padding-left: .25em; }
+  .sc-wardrobe-frame { height: calc(88svh - 64px); min-height: 530px; max-height: 780px; margin-bottom: 28px; }
+  .sc-wardrobe-frame video { object-position: 50% 50%; }
+  .sc-wardrobe-frame::after { background: linear-gradient(0deg, rgba(16,11,10,.9), rgba(17,12,11,.22) 47%, transparent 78%); }
+  .sc-wardrobe-copy { padding-bottom: 48px; }
+  .sc-wardrobe-copy h1 { font-size: clamp(70px, 17vw, 112px); margin-bottom: 24px; }
+  .sc-wardrobe-copy em.sc-word { padding-left: .2em; }
   .sc-hero-shop { min-height: 44px; padding: 0 16px; }
-  .sc-hero-credit { grid-template-columns: auto 1fr auto; gap: 9px; align-items: center; min-height: 44px; bottom: 5px; left: var(--sc-edge); right: auto; font-size: 18px; }
-  .sc-hero-credit > span { grid-column: auto; font-size: 8px; }
-  .sc-hero-credit svg { width: 13px; }
   .sc-category-nav { gap: 2px 20px; padding-block: 6px; }
   .sc-category-nav a { min-height: 42px; font-size: 20px; }
   .sc-category-nav .sc-category-all { display: none; }
@@ -229,16 +141,7 @@
   .sc-look-caption h3 { font-size: clamp(21px, 5vw, 27px); }
   .sc-look-caption > span { font-size: 11px; }
   .sc-rail-controls { gap: 5px; }
-  .sc-film, .sc-atelier { grid-template-columns: 1fr; gap: 28px; padding: 46px var(--sc-edge); }
-  .sc-film-copy, .sc-atelier-copy { justify-self: start; }
-  .sc-film-copy h2, .sc-atelier-copy h2 { font-size: clamp(61px, 15vw, 90px); }
-  .sc-film-copy > p:not(.sc-label), .sc-atelier-copy > p:not(.sc-label) { margin: 16px 0 8px; max-width: 44ch; }
-  .sc-film-frame { height: auto; aspect-ratio: 5/6; }
-  .sc-studio { padding-bottom: 58px; }
-  .sc-wardrobe-frame { height: clamp(320px, 92vw, 490px); }
-  .sc-wardrobe-copy { padding: 25px var(--sc-edge); }
-  .sc-wardrobe-copy h2 { font-size: clamp(49px, 12vw, 75px); }
-  .sc-wardrobe-frame .sc-film-toggle { top: 16px; bottom: auto; }
+  .sc-studio { padding-bottom: 56px; }
   .sc-piece-caption { flex-wrap: wrap; position: relative; }
   .sc-piece-caption h3 { font-size: 21px; }
   .sc-piece-caption > div { width: 100%; }

@@ -97,20 +97,7 @@ function initShowcase(root) {
         onComplete: () => title.classList.remove('sc-title-entering')
       });
     }
-    const textile = root.querySelector('[data-textile-study]');
-    if (!textile) return;
-    const observer = new IntersectionObserver(entries => {
-      if (entries.some(entry => entry.isIntersecting)) {
-        observer.disconnect();
-        // The study retains its still image if the browser cannot load the renderer.
-        import('/showcase/textile.js').catch(() => {});
-      }
-    }, { rootMargin: '320px 0px' });
-    observer.observe(textile);
-    return () => {
-      observer.disconnect();
-      title.classList.remove('sc-title-entering');
-    };
+    return () => title.classList.remove('sc-title-entering');
   });
 
   media.add(desktopMotion, () => {
@@ -132,19 +119,6 @@ function initShowcase(root) {
     const frame = seconds => lenis.raf(seconds * 1000);
     gsap.ticker.add(frame);
     lenis.on('scroll', ScrollTrigger.update);
-
-    for (const [imageHook, sectionHook] of [
-      ['[data-sc-parallax]', '[data-sc-hero]'],
-      ['[data-sc-film-parallax]', '[data-sc-film]']
-    ]) {
-      root.querySelectorAll(imageHook).forEach((image, index) => {
-        const shift = index % 2 ? 1.5 : 3;
-        gsap.fromTo(image, { yPercent: -shift }, {
-          yPercent: shift, ease: 'none',
-          scrollTrigger: { trigger: image.closest(sectionHook), start: 'top bottom', end: 'bottom top', scrub: true }
-        });
-      });
-    }
 
     if (travel() > 4) {
       rail.classList.add('sc-rail-enhanced');
