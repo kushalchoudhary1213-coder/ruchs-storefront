@@ -2,7 +2,7 @@
 
 A redesigned storefront built from the public [Ruchs](https://www.ruchs.in/) catalog captured on 18 November 2026. The 20 products, collection membership, published information, and original photography are retained. The layout and interactions have been remade with an editorial visual system. Product pages include photo and live camera virtual try-on adapted from the sibling Drape project. The generated pages and same-origin APIs run on Cloudflare Workers.
 
-The homepage opens with a silent, looping film of garments on a rail, followed by selected Ruchs products and a shoppable lookbook. GSAP ScrollTrigger and Lenis coordinate desktop scrolling. Touch devices use a native horizontal gallery.
+The homepage opens with a silent, looping film of garments on a rail, followed by selected Ruchs products and a shoppable lookbook. GSAP ScrollTrigger and Lenis coordinate desktop scrolling. On phones and tablets, vertical scrolling moves the lookbook horizontally. Visitors with reduced motion enabled can swipe through a native horizontal gallery.
 
 The opening film uses the supplied 4K garment-rail footage, with separate desktop and phone encodes. It autoplays silently and loops without an on-page pause control.
 

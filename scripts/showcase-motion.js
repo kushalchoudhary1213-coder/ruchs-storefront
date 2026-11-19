@@ -9,6 +9,7 @@ function initShowcase(root) {
   const media = gsap.matchMedia();
   const motionAllowed = '(prefers-reduced-motion: no-preference)';
   const desktopMotion = motionAllowed + ' and (min-width: 960px) and (min-height: 600px) and (hover: hover) and (pointer: fine)';
+  const mobileMotion = motionAllowed + ' and (max-width: 959px)';
   const header = document.querySelector('.site-header');
   const headerHeight = () => header?.getBoundingClientRect().height || 0;
   const rail = root.querySelector('[data-sc-rail]');
@@ -39,9 +40,10 @@ function initShowcase(root) {
     const end = travel();
     if (!end) return;
     const position = gsap.utils.clamp(0, end, offset);
-    if (pin && lenis) {
+    if (pin) {
       const scroll = pin.start + (pin.end - pin.start) * position / end;
-      lenis.scrollTo(scroll, { immediate });
+      if (lenis) lenis.scrollTo(scroll, { immediate });
+      else window.scrollTo({ top: scroll, behavior: immediate ? 'instant' : 'smooth' });
     } else {
       viewport.scrollTo({ left: position, behavior: immediate || !matchMedia(motionAllowed).matches ? 'instant' : 'smooth' });
     }
@@ -100,6 +102,32 @@ function initShowcase(root) {
     return () => title.classList.remove('sc-title-entering');
   });
 
+  function enablePinnedRail() {
+    if (travel() <= 4) return () => {};
+    rail.classList.add('sc-rail-enhanced');
+    viewport.scrollLeft = 0;
+    const tween = gsap.to(track, {
+      x: () => -travel(), ease: 'none',
+      scrollTrigger: {
+        trigger: rail, pin: rail.querySelector('[data-sc-pin]'),
+        start: () => 'top top+=' + headerHeight(), end: () => '+=' + travel(),
+        scrub: true, invalidateOnRefresh: true, anticipatePin: 1,
+        onUpdate: updateRail, onRefresh: updateRail
+      }
+    });
+    pin = tween.scrollTrigger;
+    updateRail();
+    return () => {
+      tween.scrollTrigger.kill();
+      tween.kill();
+      pin = null;
+      rail.classList.remove('sc-rail-enhanced');
+      updateRail();
+    };
+  }
+
+  media.add(mobileMotion, () => enablePinnedRail());
+
   media.add(desktopMotion, () => {
     const overlays = ['#mobile-menu', '#search-panel', '#cart-layer', '#tryon-layer', '#live-tryon-layer'];
     const panels = [...document.querySelectorAll(overlays.join(','))];
@@ -120,20 +148,7 @@ function initShowcase(root) {
     gsap.ticker.add(frame);
     lenis.on('scroll', ScrollTrigger.update);
 
-    if (travel() > 4) {
-      rail.classList.add('sc-rail-enhanced');
-      viewport.scrollLeft = 0;
-      const tween = gsap.to(track, {
-        x: () => -travel(), ease: 'none',
-        scrollTrigger: {
-          trigger: rail, pin: rail.querySelector('[data-sc-pin]'),
-          start: () => 'top top+=' + headerHeight(), end: () => '+=' + travel(),
-          scrub: true, invalidateOnRefresh: true, anticipatePin: 1,
-          onUpdate: updateRail, onRefresh: updateRail
-        }
-      });
-      pin = tween.scrollTrigger;
-    }
+    const stopRail = enablePinnedRail();
 
     const events = new AbortController();
     root.querySelectorAll('[data-sc-magnetic]').forEach(link => {
@@ -155,9 +170,7 @@ function initShowcase(root) {
       gsap.ticker.remove(frame);
       lenis.destroy();
       lenis = null;
-      pin = null;
-      rail.classList.remove('sc-rail-enhanced');
-      updateRail();
+      stopRail();
     };
   });
 
