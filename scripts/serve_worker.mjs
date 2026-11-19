@@ -1,15 +1,22 @@
 import http from 'node:http';
 import {Readable} from 'node:stream';
-import {createReadStream, statSync} from 'node:fs';
+import {createReadStream, statSync, readdirSync} from 'node:fs';
+import {extname, join, relative, sep} from 'node:path';
+import {fileURLToPath} from 'node:url';
 import worker from '../dist/server/index.js';
 import {createLocalQuotaDb} from './local_quota.mjs';
 
 const port = Number(process.env.PORT || 4173);
 const DB = createLocalQuotaDb();
-const mediaFiles = new Map([
-  ['/media/ruchs-campaign.mp4', {file: new URL('../dist/static/media/ruchs-campaign.mp4', import.meta.url), type: 'video/mp4'}],
-  ['/media/ruchs-campaign-poster.jpg', {file: new URL('../dist/static/media/ruchs-campaign-poster.jpg', import.meta.url), type: 'image/jpeg'}],
-]);
+const assetDirectory = fileURLToPath(new URL('../dist/static/', import.meta.url));
+const contentTypes = {'.mp4':'video/mp4', '.webp':'image/webp', '.jpg':'image/jpeg', '.css':'text/css', '.js':'text/javascript', '.woff2':'font/woff2', '.avif':'image/avif', '.png':'image/png'};
+const mediaFiles = new Map();
+for (const entry of readdirSync(assetDirectory, {recursive: true, withFileTypes: true})) {
+  if (!entry.isFile()) continue;
+  const file = join(entry.parentPath ?? entry.path, entry.name);
+  const pathname = '/' + relative(assetDirectory, file).split(sep).map(encodeURIComponent).join('/');
+  mediaFiles.set(pathname, {file, type: contentTypes[extname(file)] ?? 'application/octet-stream'});
+}
 http.createServer(async (incoming, outgoing) => {
   const pathname = new URL(incoming.url, `http://127.0.0.1:${port}`).pathname;
   const media = mediaFiles.get(pathname);

@@ -8,7 +8,7 @@ import re
 import base64
 import shutil
 from pathlib import Path
-from urllib.parse import urlparse
+from catalog_media import catalog_url, prepare_catalog
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
@@ -45,7 +45,7 @@ def text(value: object) -> str:
 
 
 def image_path(source: str) -> str:
-    return "/cdn/shop/files/" + Path(urlparse(source).path).name
+    return catalog_url(source)
 
 
 def first_image(product: dict) -> str:
@@ -61,10 +61,14 @@ def product_card(product: dict, index: int = 0) -> str:
     handle = text(product["handle"])
     title = text(product["title"])
     image = first_image(product)
+    alternate = ""
+    if len(product["images"]) > 1:
+        detail = image_path(product["images"][1]["src"])
+        alternate = f'<img class="product-card__alternate" alt="" aria-hidden="true" src="{detail}" loading="lazy">'
     return f'''<article class="product-card" data-order="{index}" data-title="{title.lower()}" data-price="{min(float(v['price']) for v in product['variants'])}">
       <a class="product-card__image" href="/products/{handle}/" aria-label="View {title}">
         <img src="{image}" alt="{title}" loading="{'eager' if index < 4 else 'lazy'}" width="{product['images'][0].get('width',800)}" height="{product['images'][0].get('height',1100)}">
-        <span class="product-card__view">View piece {icon('arrow')}</span>
+        {alternate}<span class="product-card__view">View piece {icon('arrow')}</span>
       </a>
       <div class="product-card__meta"><div><h3><a href="/products/{handle}/">{title}</a></h3><p>{price(product)}</p></div>
         <button class="icon-button wish-button" type="button" data-wish="{handle}" aria-label="Save {title} to wishlist" aria-pressed="false">{icon('heart')}</button></div>
@@ -74,60 +78,162 @@ def product_card(product: dict, index: int = 0) -> str:
 def header() -> str:
     links = ''.join(f'<a href="/collections/{slug}/">{label}</a>' for slug, label in COLLECTIONS[:4])
     return f'''<a class="skip-link" href="#main">Skip to content</a>
-    <div class="announcement"><span>Thoughtfully made. Beautifully worn.</span><a href="/collections/all/">Explore the collection {icon('arrow')}</a></div>
     <header class="site-header"><div class="header-inner">
       <button type="button" class="icon-button mobile-menu-button" data-menu-open aria-label="Open menu" aria-expanded="false">{icon('menu')}</button>
-      <nav class="primary-nav" aria-label="Primary"><a href="/collections/all/">Shop all</a><a href="/collections/">Collections</a><a href="/pages/about-us/">Our story</a></nav>
+      <nav class="primary-nav" aria-label="Primary"><a href="/collections/all/">Shop</a><a href="/#lookbook">Lookbook</a><a href="/#atelier">Atelier</a></nav>
       <a class="brand" href="/" aria-label="Ruchs home"><span>RUCHS</span><small>BY RUCHI SACHDEVA</small></a>
       <div class="header-actions"><button type="button" class="icon-button" data-search-open aria-label="Search">{icon('search')}</button>
         <a class="icon-button" href="/pages/swym-wishlist/" aria-label="Wishlist">{icon('heart')}</a>
         <button type="button" class="icon-button bag-button" data-cart-open aria-label="Open cart">{icon('bag')}<span class="cart-count" data-cart-count hidden>0</span></button></div>
     </div></header>
     <div class="mobile-menu" id="mobile-menu" hidden><div class="mobile-menu__top"><span>Explore Ruchs</span><button class="icon-button" data-menu-close aria-label="Close menu">{icon('close')}</button></div><nav aria-label="Mobile">
-      <a href="/collections/all/">Shop all {icon('arrow')}</a>{links}<a href="/pages/about-us/">Our story</a><a href="/pages/contact/">Contact</a></nav></div>
+      <a href="/collections/all/">Shop all {icon('arrow')}</a>{links}<a href="/#lookbook">Lookbook</a><a href="/#atelier">Atelier</a><a href="/pages/swym-wishlist/">Wishlist</a><a href="/pages/about-us/">Our story</a><a href="/pages/contact/">Contact</a></nav></div>
     <div class="search-panel" id="search-panel" hidden><div class="search-panel__inner"><form action="/search/" role="search"><label for="site-search">Search the collection</label><div><input id="site-search" name="q" type="search" placeholder="Try dresses, sets, skirts…" autocomplete="off"><button type="submit" aria-label="Submit search">{icon('arrow')}</button></div></form><button class="icon-button" data-search-close aria-label="Close search">{icon('close')}</button></div></div>'''
 
 
 def footer() -> str:
     collection_links = ''.join(f'<a href="/collections/{slug}/">{label}</a>' for slug, label in COLLECTIONS[:6])
-    return f'''<footer class="site-footer"><div class="footer-main wrap"><div class="footer-brand"><a class="brand" href="/"><span>RUCHS</span><small>BY RUCHI SACHDEVA</small></a><p>Thoughtful clothing for the many ways you move through the world.</p></div>
+    return f'''<footer class="site-footer"><div class="footer-main wrap"><div class="footer-brand"><a class="brand" href="/"><span>RUCHS</span><small>BY RUCHI SACHDEVA</small></a><p>Womenswear by Ruchi Sachdeva.</p></div>
       <div class="footer-links"><h2>Explore</h2><a href="/collections/all/">Shop all</a>{collection_links}</div>
       <div class="footer-links"><h2>About</h2><a href="/pages/about-us/">Our story</a><a href="/pages/contact/">Contact</a><a href="/policies/shipping-policy/">Shipping</a><a href="/policies/refund-policy/">Returns & exchanges</a><a href="/policies/privacy-policy/">Privacy</a></div>
-      <div class="footer-connect"><h2>Stay close</h2><p>New pieces, styling notes, and a slower way to dress.</p><a class="text-link" href="https://www.instagram.com/ruchsofficial/" target="_blank" rel="noopener">Follow on Instagram {icon('arrow')}</a></div></div>
-      <div class="footer-bottom wrap"><span>© 2026 Ruchs</span><span>Made with intention</span><a href="/policies/terms-of-service/">Terms of service</a></div></footer>
+      <div class="footer-connect"><h2>Follow Ruchs</h2><a class="text-link" href="https://www.instagram.com/ruchsofficial/" target="_blank" rel="noopener">Follow on Instagram {icon('arrow')}</a></div></div>
+      <div class="footer-bottom wrap"><span>© 2026 Ruchs</span><a href="/policies/terms-of-service/">Terms of service</a></div></footer>
       <div class="cart-layer" id="cart-layer" hidden><button class="cart-scrim" data-cart-close aria-label="Close cart"></button><aside class="cart-drawer" role="dialog" aria-modal="true" aria-labelledby="cart-title"><header><h2 id="cart-title">Your bag <span data-cart-heading-count>0</span></h2><button class="icon-button" data-cart-close aria-label="Close cart">{icon('close')}</button></header><div class="cart-drawer__body" data-cart-lines></div><footer data-cart-footer></footer></aside></div>'''
 
 
 def page(title: str, body: str, description: str = "Thoughtfully crafted sustainable fashion by Ruchs.", kind: str = "product") -> str:
-    return f'''<!doctype html><html lang="en" data-type="{kind}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#43162b"><meta name="page-type" content="{kind}"><meta name="site-kind" content="other"><meta name="description" content="{text(description)}"><title>{text(title)} — Ruchs</title><link rel="icon" href="/cdn/shop/files/IMG_3941_48cfe4a1-81fc-463d-9b5d-aed2d550434b.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="/remap.css"><link rel="stylesheet" href="/react-bits.css"><link rel="stylesheet" href="/experience.css"><link rel="stylesheet" href="/tryon.css"><link rel="stylesheet" href="/live-tryon.css"><script defer src="/remap.js"></script><script defer src="/react-bits.js"></script><script defer src="/experience.js"></script><script defer src="/tryon.js"></script><script defer src="/live-tryon.js"></script></head><body>{header()}<main id="main">{body}</main>{footer()}</body></html>'''
+    styles = ["/remap.css", "/showcase/shop.css"]
+    scripts = ["/remap.js"]
+    home_resources = ""
+    if kind == "home":
+        styles.extend(["/showcase/showcase.css", "/showcase/textile.css"])
+        scripts.append("/experience.js")
+        home_resources = '<script type="module" src="/showcase/showcase-motion.js"></script>'
+    if "data-product-handle=" in body:
+        styles.extend(["/tryon.css", "/live-tryon.css"])
+        scripts.extend(["/tryon.js", "/live-tryon.js"])
+    css = "".join(f'<link rel="stylesheet" href="{url}">' for url in styles)
+    js = "".join(f'<script defer src="{url}"></script>' for url in scripts)
+    return f'''<!doctype html><html lang="en" data-type="{kind}"><head>
+    <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f6f1e7">
+    <meta name="description" content="{text(description)}"><title>{text(title)} — Ruchs</title>
+    <link rel="icon" href="/showcase/ruchs-icon.png" type="image/png">
+    {css}{js}{home_resources}</head><body>{header()}<main id="main">{body}</main>{footer()}</body></html>'''
+
+
+def home_look(handle: str, image: str, detail: str, mood: str) -> str:
+    product = BY_HANDLE[handle]
+    title = text(product["title"])
+    return f'''<article class="sc-look">
+      <a href="/products/{handle}/" aria-label="Shop {title}">
+        <div class="sc-look-plates">
+          <img class="sc-look-full" src="/showcase/{image}.webp" alt="{title}" width="680" height="907" loading="lazy">
+          <img class="sc-look-detail" src="/showcase/{detail}.webp" alt="" width="440" height="587" loading="lazy">
+        </div>
+        <div class="sc-look-caption"><div><p>{text(mood)}</p><h3>{title}</h3></div><span>{price(product)} {icon("arrow")}</span></div>
+      </a></article>'''
+
+
+def home_piece(handle: str, image: str) -> str:
+    product = BY_HANDLE[handle]
+    title = text(product["title"])
+    return f'''<article class="sc-piece">
+      <a class="sc-piece-photo" href="/products/{handle}/" aria-label="Shop {title}">
+        <img src="/showcase/{image}.webp" alt="{title}" width="560" height="747" loading="lazy">
+      </a>
+      <div class="sc-piece-caption"><div><h3><a href="/products/{handle}/">{title}</a></h3><p>{price(product)}</p></div>
+      <button class="icon-button wish-button" type="button" data-wish="{handle}" aria-pressed="false" aria-label="Save {title} to wishlist">{icon("heart")}</button></div>
+    </article>'''
 
 
 def home() -> str:
-    hero_product = BY_HANDLE["mira-modular-white-co-ord-set"]
-    category = DATA["category_images"]
-    featured = [BY_HANDLE[h] for h in ["angelic-cinderella-dress", "vera-luxe-co-ord-set", "aria-hibiscus-set", "luna-burgundy-jumpsuit"]]
-    categories = [("Dresses", "dresses"), ("Co-ord Sets", "co-ords"), ("Corset/Tops", "corset"), ("Skirts", "skirts")]
-    cards = ''.join(f'''<a href="/collections/{slug}/" class="category-card"><img src="{category.get(label,first_image(featured[0]))}" alt="" loading="lazy"><span>{text(label)} {icon('arrow')}</span></a>''' for label, slug in categories)
-    looks = [BY_HANDLE[handle] for handle in ("mira-modular-white-co-ord-set", "aria-hibiscus-set", "luna-burgundy-jumpsuit")]
-    lookbook_cards = ''.join(f'''<a class="lookbook3d__card" data-lookbook-card data-position="{0 if index == 0 else 1 if index == 1 else -1}" href="/products/{text(item['handle'])}/" aria-label="View {text(item['title'])}"><img src="{first_image(item)}" alt="{text(item['title'])}" loading="lazy"><span><small>0{index + 1} / THE RUCHS EDIT</small><strong>{text(item['title'])}</strong></span></a>''' for index, item in enumerate(looks))
-    body = f'''<section class="home-hero"><div class="home-hero__copy"><p class="eyebrow" data-enter>RUCHS · THE NEW EDIT</p><h1 data-enter>Clothing that moves <em>with you.</em></h1><p data-enter>Thoughtful silhouettes, plant-based fabrics, and pieces made for more than one moment.</p><a data-enter class="button button-light" href="/collections/all/">Explore the collection {icon('arrow')}</a><span class="hero-footnote">SUSTAINABLE STYLE · DESIGNED TO LAST</span></div><div class="home-hero__visual"><img src="{first_image(hero_product)}" alt="Model wearing the Mira Modular White Co-ord Set" fetchpriority="high" width="{hero_product['images'][0]['width']}" height="{hero_product['images'][0]['height']}"></div></section>
-    <section class="intro-band"><div class="wrap"><span class="eyebrow">A MORE CONSIDERED WARDROBE</span><p>Beautiful things should feel good to wear — and good to keep.</p></div></section>
-    <section class="section section-categories wrap"><div class="section-heading"><div><p class="eyebrow">FIND YOUR FORM</p><h2>Shop by collection</h2></div><a class="text-link" href="/collections/">View all collections {icon('arrow')}</a></div><div class="category-grid">{cards}</div></section>
-    <section class="campaign-film" aria-labelledby="campaign-film-title"><div class="campaign-film__visual"><video data-campaign-video src="/media/ruchs-campaign.mp4" poster="/media/ruchs-campaign-poster.jpg" muted loop playsinline preload="none" aria-label="Ruchs fashion film: a model walking through a woodland setting in a white dress"></video><button type="button" class="campaign-film__toggle" data-campaign-toggle aria-label="Play fashion film">Play film</button><span class="campaign-film__index">RUCHS / IN MOTION</span></div><div class="campaign-film__copy"><p class="eyebrow">THE ART OF MOVEMENT</p><h2 id="campaign-film-title">Made to be <em>lived in.</em></h2><p>Shape, fabric and movement come together in the Ruchs world. Watch the collection move, then find a piece that feels like yours.</p><a class="button button-outline" href="/collections/dresses/">Explore dresses {icon('arrow')}</a><span class="campaign-film__note">A FILM FROM THE RUCHS COLLECTION</span></div></section>
-    <section class="story-section"><div class="story-section__image"><img src="{first_image(BY_HANDLE['ella-petal-set'])}" alt="Ruchs floral two-piece set styled outdoors" loading="lazy"></div><div class="story-section__copy"><p class="eyebrow">THE RUCHS POINT OF VIEW</p><h2>Rooted in nature.<br><em>Inspired by you.</em></h2><p>We believe fashion should empower, not harm. Our pieces pair timeless design with plant-based, ethically sourced materials.</p><a class="button button-outline" href="/pages/about-us/">Discover our story {icon('arrow')}</a></div></section>
-    <section class="lookbook3d" aria-labelledby="lookbook3d-title"><div class="lookbook3d__inner wrap"><div class="lookbook3d__copy"><p class="eyebrow">INTERACTIVE LOOKBOOK</p><h2 id="lookbook3d-title">A new angle on <em>the Ruchs edit.</em></h2><p>Explore three real Ruchs looks in a dimensional gallery. Turn through the edit and open a piece to see its details and try-on options.</p><div class="lookbook3d__controls"><button type="button" data-lookbook-prev aria-label="Previous look">{icon('arrow')}</button><span data-lookbook-count aria-live="polite">01 / 03</span><button type="button" data-lookbook-next aria-label="Next look">{icon('arrow')}</button></div></div><div class="lookbook3d__viewport"><div class="lookbook3d__orbit" data-lookbook-orbit>{lookbook_cards}</div><span class="lookbook3d__floor" aria-hidden="true"></span></div></div></section>
-    <section class="section section-products wrap"><div class="section-heading"><div><p class="eyebrow">THE PIECES TO KNOW</p><h2>Our current favourites</h2></div><a class="text-link" href="/collections/all/">Shop all pieces {icon('arrow')}</a></div><div class="product-grid">{''.join(product_card(p,i) for i,p in enumerate(featured))}</div></section>
-    <section class="values-band"><div class="wrap"><div><span>01</span><h3>Natural fibres</h3><p>Materials chosen with care.</p></div><div><span>02</span><h3>Made to last</h3><p>Considered forms beyond the season.</p></div><div><span>03</span><h3>Wear it your way</h3><p>Versatile pieces for real life.</p></div></div></section>
-    <section class="closing-story"><div><p class="eyebrow">DRESS WITH INTENTION</p><h2>More ways to wear.<br><em>More reasons to love.</em></h2><a class="button button-light" href="/collections/all/">Find your next piece {icon('arrow')}</a></div><img src="{first_image(BY_HANDLE['angelic-cinderella-dress'])}" alt="Angelic Cinderella Dress by Ruchs" loading="lazy"></section>'''
-    return page("Sustainable style for modern women", body, "Explore considered womenswear, versatile silhouettes, and plant-based materials at Ruchs.")
+    looks = [
+        ("mira-modular-white-co-ord-set", "mira-look", "mira-detail", "White on white"),
+        ("aria-hibiscus-set", "aria-look", "aria-detail", "Hibiscus pink"),
+        ("luna-burgundy-jumpsuit", "luna-look", "luna-detail", "Deep burgundy"),
+    ]
+    pieces = [
+        ("ella-petal-set", "ella-petal"), ("dusty-blue-lace-dress", "dusty-blue"),
+        ("jasmine-royal-coord-set", "jasmine-blue"), ("wednesday-muse-dress", "wednesday-muse"),
+    ]
+    body = f'''<div class="showcase" data-showcase>
+    <section class="sc-hero" data-sc-hero aria-labelledby="garden-title">
+      <div class="sc-hero-plate sc-hero-detail">
+        <picture><source media="(max-width: 700px)" srcset="data:image/gif;base64,R0lGODlhAQABAAAAACwAAAAAAQABAAA=">
+        <img data-sc-parallax src="/showcase/zoya-detail.webp" srcset="/showcase/zoya-detail-small.webp 640w, /showcase/zoya-detail.webp 1200w" sizes="58vw" width="1200" height="1600" alt="" fetchpriority="high"></picture>
+      </div>
+      <div class="sc-hero-plate sc-hero-garden">
+        <img data-sc-parallax src="/showcase/zoya-garden.webp" srcset="/showcase/zoya-garden-small.webp 640w, /showcase/zoya-garden.webp 1000w" sizes="(max-width: 700px) 100vw, 42vw" alt="The Zoya Eclipse Dress photographed in a sunlit garden" width="1000" height="1334" fetchpriority="high">
+      </div>
+      <div class="sc-hero-copy">
+        <h1 id="garden-title" data-sc-title aria-label="The garden edit"><span class="sc-word" aria-hidden="true"><span>The garden</span></span> <em class="sc-word" aria-hidden="true"><span>edit.</span></em></h1>
+        <a class="sc-hero-shop" data-sc-magnetic href="/collections/all/"><span>Explore the collection</span> {icon("arrow")}</a>
+      </div>
+      <a class="sc-hero-credit" href="/products/zoya-eclipse-dress/"><span>Featured look</span>Zoya Eclipse Dress {icon("arrow")}</a>
+    </section>
+    <nav class="sc-category-nav" aria-label="Shop by category">
+      <span>Shop by category</span>
+      <a href="/collections/dresses/">Dresses</a><a href="/collections/co-ords/">Co-ords</a>
+      <a href="/collections/corset/">Tops</a><a href="/collections/skirts/">Skirts</a>
+      <a class="sc-category-all" href="/collections/">All collections {icon("arrow")}</a>
+    </nav>
+    <section class="sc-rail" id="lookbook" data-sc-rail aria-labelledby="lookbook-title">
+      <div class="sc-pin" data-sc-pin>
+        <div class="sc-section-heading"><h2 id="lookbook-title">The lookbook</h2>
+          <div class="sc-rail-controls">
+            <button type="button" data-sc-prev hidden aria-label="Previous look">{icon("arrow")}</button>
+            <button type="button" data-sc-next hidden aria-label="Next look">{icon("arrow")}</button>
+          </div>
+        </div>
+        <div class="sc-window" data-sc-window tabindex="0" role="region" aria-label="Shoppable looks">
+          <div class="sc-track" data-sc-track>{''.join(home_look(*look) for look in looks)}</div>
+        </div>
+        <div class="sc-progress-rule" aria-hidden="true"><span data-sc-progress></span></div>
+      </div>
+    </section>
+    <section class="sc-film" id="film" data-sc-film aria-labelledby="film-title">
+      <div class="sc-film-copy">
+        <p class="sc-label">Campaign film <span aria-hidden="true">/</span> 00:08</p>
+        <h2 id="film-title">A walk in<br><em>the woods.</em></h2>
+        <p>White fabric catches the light and falls back into shadow with each step.</p>
+        <a class="sc-underline" data-sc-magnetic href="/collections/dresses/"><span>Shop dresses</span> {icon("arrow")}</a>
+      </div>
+      <div class="sc-film-frame"><div class="sc-film-screen" data-sc-film-parallax>
+        <video data-campaign-video src="/media/ruchs-campaign.mp4" poster="/media/ruchs-campaign-poster.jpg" muted loop playsinline preload="none" aria-label="A model walking through the woods in a white Ruchs dress"></video>
+      </div>
+      <button class="sc-film-toggle" type="button" data-campaign-toggle hidden>Play film</button></div>
+    </section>
+    <section class="sc-atelier" id="atelier" aria-labelledby="atelier-title">
+      <div class="sc-atelier-copy"><p class="sc-label">Atelier / Interactive study</p><h2 id="atelier-title">The shape<br>of a <em>fold.</em></h2>
+      <p>A study in drape and light. Follow a ridge of plum fabric from a bright edge into a deep, soft crease.</p>
+      <a class="sc-underline" data-sc-magnetic href="/pages/about-us/"><span>Our story</span> {icon("arrow")}</a></div>
+      <figure class="textile-study" data-textile-study>
+        <div class="textile-frame" data-textile-frame><img class="textile-poster" src="/showcase/drape-study.webp" alt="A sculptural square of plum fabric gathered into flowing folds" width="900" height="670" loading="lazy"></div>
+        <figcaption><span>Fabric in motion</span><button type="button" data-textile-turn hidden>Turn the drape</button></figcaption>
+      </figure>
+    </section>
+    <section class="sc-studio" id="wardrobe" aria-labelledby="studio-title">
+      <div class="sc-wardrobe-frame">
+        <video data-campaign-video muted loop playsinline preload="none" poster="/media/wardrobe-poster.webp" aria-label="A close look along a rail of garments on wooden hangers">
+          <source media="(max-width: 700px)" src="/media/wardrobe-mobile.mp4" type="video/mp4">
+          <source src="/media/wardrobe-film.mp4" type="video/mp4">
+        </video>
+        <div class="sc-wardrobe-copy"><h2 id="studio-title">Selected <em>pieces.</em></h2>
+          <a class="sc-underline" href="/collections/all/"><span>Shop all pieces</span> {icon("arrow")}</a>
+        </div>
+        <button class="sc-film-toggle" type="button" data-campaign-toggle hidden>Play film</button>
+      </div>
+      <div class="sc-pieces">{''.join(home_piece(*piece) for piece in pieces)}</div>
+    </section></div>'''
+    return page("The garden edit", body, "Shop the Ruchs garden edit, explore the lookbook, and watch the collection in motion.", kind="home")
 
 
 def collection_index() -> str:
     cards = []
     for label, slug in [("Dresses", "dresses"), ("Co-ord Sets", "co-ords"), ("Corset/Tops", "corset"), ("Skirts", "skirts"), ("Jumpsuits", "jumpsuits"), ("Pants", "pants"), ("Shirts", "shirts"), ("Skorts/Shorts", "skorts-shorts")]:
-        image = DATA["category_images"].get(label, "")
+        image = catalog_url(DATA["category_images"][label])
         cards.append(f'<a class="collection-tile" href="/collections/{slug}/"><img src="{image}" alt="" loading="lazy"><span>{text(label)} {icon("arrow")}</span></a>')
-    body = f'<section class="page-intro wrap"><p class="eyebrow">EXPLORE RUCHS</p><h1>Find your <em>kind of beautiful.</em></h1><p>Discover pieces designed to move with your plans and your point of view.</p></section><section class="section wrap"><div class="collection-grid">{"".join(cards)}</div></section>'
+    body = f'<section class="page-intro wrap"><h1>Collections</h1></section><section class="section wrap"><div class="collection-grid">{"".join(cards)}</div></section>'
     return page("Collections", body)
 
 
@@ -135,8 +241,11 @@ def listing(slug: str, details: dict) -> str:
     handles = details["products"]
     products = [BY_HANDLE[h] for h in handles if h in BY_HANDLE]
     title = details["title"] if slug not in {"all", "shop"} else "The collection"
-    chips = '<a href="/collections/all/" class="collection-chip">All pieces</a>' + ''.join(f'<a href="/collections/{s}/" class="collection-chip">{label}</a>' for s,label in COLLECTIONS)
-    body = f'''<section class="listing-intro wrap"><p class="eyebrow">THE RUCHS EDIT</p><h1>{text(title)}</h1><p>Thoughtful pieces for wherever the day takes you.</p></section>
+    chips = ""
+    for category_slug, label in [("all", "All pieces"), *COLLECTIONS]:
+        selected = ' aria-current="page"' if category_slug == ("all" if slug == "shop" else slug) else ""
+        chips += f'<a href="/collections/{category_slug}/" class="collection-chip"{selected}>{text(label)}</a>'
+    body = f'''<section class="listing-intro wrap"><a class="collection-back" href="/collections/">Collections</a><h1>{text(title)}</h1></section>
       <section class="listing-section wrap"><nav class="collection-chips" aria-label="Shop categories">{chips}</nav>
       <div class="listing-toolbar"><span data-result-count>{len(products)} pieces</span><label>Sort by <select id="sort-products"><option value="featured">Featured</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option><option value="name">Name</option></select></label></div>
       <div class="product-grid" id="listing-grid">{''.join(product_card(p,i) for i,p in enumerate(products))}</div><p class="empty-results" id="empty-results" hidden>No pieces match this search.</p></section>'''
@@ -174,10 +283,11 @@ def product_detail(product: dict) -> str:
     live_modal = f'''<div class="live-layer" id="live-tryon-layer" hidden><div class="live-backdrop" data-live-close></div><section class="live-dialog" role="dialog" aria-modal="true" aria-labelledby="live-title" aria-describedby="live-description"><button type="button" class="icon-button live-close" data-live-close data-live-close-button aria-label="Close live try-on">{icon('close')}</button><div class="live-copy"><p class="eyebrow">THE RUCHS LIVE FITTING ROOM</p><h2 id="live-title">See it in <em>motion.</em></h2><p id="live-description">Try the {title} on through your camera. This live AI preview follows your movement, but does not measure size or fit.</p><div class="live-piece"><img src="{first_image(product)}" alt="{title}" data-live-garment><div><span>YOUR PIECE</span><strong>{title}</strong><small>Current product photo</small></div></div><button type="button" class="button button-dark live-start" data-live-start disabled>Start live try-on {icon('arrow')}</button><button type="button" class="button button-outline live-stop" data-live-stop hidden>Stop camera {icon('close')}</button><p class="live-status" data-live-status role="status" aria-live="polite"></p><p class="live-notice">Your camera video is sent to Decart only while the live session runs. Each session lasts at most 30 seconds and uses Decart credits. This catalog uses model photos, so garment details may vary in the live preview.</p></div><div class="live-visual"><div class="live-stage" data-live-stage><video class="live-camera" data-live-camera autoplay muted playsinline aria-label="Your camera preview"></video><video class="live-result" data-live-result autoplay muted playsinline aria-label="AI live try-on result"></video><div class="live-placeholder"><span>LIVE VIRTUAL TRY-ON</span><p>Your fitting starts here.</p></div></div><div class="live-stage-label"><span>DECART LIVE PREVIEW</span><span data-live-timer></span></div></div></section></div>'''
     body = f'''<div class="breadcrumbs wrap"><a href="/">Home</a><span>/</span><a href="/collections/all/">Shop</a><span>/</span><span>{title}</span></div>
       <section class="product-detail wrap" data-product-handle="{text(product['handle'])}" data-live-prompt="{text(live_prompt)}"><div class="product-gallery"><div class="product-gallery__main"><img id="main-product-image" src="{first_image(product)}" alt="{title}" width="{images[0].get('width',800)}" height="{images[0].get('height',1100)}"></div><div class="product-gallery__thumbs" aria-label="Product photos">{gallery}</div></div>
-      <div class="product-information"><p class="eyebrow">RUCHS · THOUGHTFULLY MADE</p><h1>{title}</h1><p class="product-price" id="product-price">{price(product)}</p><p class="product-intro">{text(summary)}</p>
+      <div class="product-information"><h1>{title}</h1><p class="product-price" id="product-price">{price(product)}</p><p class="product-intro">{text(summary)}</p>
       {''.join(option_groups)}<div class="buy-row"><div class="quantity-control" aria-label="Quantity"><button type="button" data-qty-minus aria-label="Decrease quantity">{icon('minus')}</button><input id="product-quantity" type="number" inputmode="numeric" min="1" value="1" aria-label="Quantity"><button type="button" data-qty-plus aria-label="Increase quantity">{icon('plus')}</button></div><button type="button" class="button button-dark add-button" data-add-to-cart>Add to bag {icon('arrow')}</button></div>
-      <button type="button" class="button button-outline tryon-launch" data-tryon-open>Try it on with your photo {icon('arrow')}</button><p class="tryon-intro">Preview this piece on yourself before you choose.</p>
-      <button type="button" class="button button-outline live-launch" data-live-open>Try it on live {icon('arrow')}</button><p class="live-intro">See this piece in motion through your camera.</p>
+      <fieldset class="fitting-options"><legend>Virtual fitting room</legend><div>
+      <button type="button" class="button button-outline tryon-launch" data-tryon-open>Try it on with your photo {icon('arrow')}</button>
+      <button type="button" class="button button-outline live-launch" data-live-open>Try it on live {icon('arrow')}</button></div></fieldset>
       <button type="button" class="save-product" data-wish="{text(product['handle'])}" aria-pressed="false">{icon('heart')} Save to wishlist</button>
       <div class="product-accordions"><details open><summary>Details {icon('chevron')}</summary><div>{str(description)}</div></details><details><summary>Shipping & returns {icon('chevron')}</summary><p>Delivery and exchange information is available in our published policies.</p><p><a href="/policies/shipping-policy/">Shipping policy</a> · <a href="/policies/refund-policy/">Refund policy</a></p></details></div></div></section>
       <section class="section wrap related-section"><div class="section-heading"><div><p class="eyebrow">CONTINUE EXPLORING</p><h2>You might also like</h2></div><a class="text-link" href="/collections/all/">Shop all {icon('arrow')}</a></div><div class="product-grid">{''.join(product_card(p,i) for i,p in enumerate([p for p in PRODUCTS if p['handle'] != product['handle']][:4]))}</div></section>
@@ -224,6 +334,7 @@ def write(route: str, markup: str) -> None:
 
 
 def main() -> None:
+    prepare_catalog(DIST, PRODUCTS, DATA["category_images"])
     shutil.copyfile(ROOT / "scripts" / "remap.css", DIST / "remap.css")
     shutil.copyfile(ROOT / "scripts" / "tryon.css", DIST / "tryon.css")
     shutil.copyfile(ROOT / "scripts" / "remap.js", DIST / "remap.js")
@@ -236,7 +347,7 @@ def main() -> None:
     shutil.copyfile(ROOT / "third_party" / "REACT_BITS_LICENSE.md", DIST / "react-bits-license.txt")
     media_output = DIST / "static" / "media"
     media_output.mkdir(parents=True, exist_ok=True)
-    for name in ("ruchs-campaign.mp4", "ruchs-campaign-poster.jpg"):
+    for name in ("ruchs-campaign.mp4", "ruchs-campaign-poster.jpg", "wardrobe-film.mp4", "wardrobe-mobile.mp4", "wardrobe-poster.webp"):
         shutil.copyfile(ROOT / "assets" / "media" / name, media_output / name)
     shutil.copyfile(ROOT / "scripts" / "tryon.js", DIST / "tryon.js")
     shutil.copyfile(ROOT / "scripts" / "live-tryon.css", DIST / "live-tryon.css")

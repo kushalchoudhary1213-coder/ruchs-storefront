@@ -7,7 +7,28 @@
   const write = (key, value) => localStorage.setItem(key, JSON.stringify(value));
   const money = value => `₹ ${Number(value).toLocaleString('en-IN', {maximumFractionDigits: 0})}`;
   const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
-  const imagePath = url => `/cdn/shop/files/${new URL(url).pathname.split('/').pop()}`;
+  const imagePath = url => `/catalog/${new URL(url).pathname.split('/').pop()}.webp`;
+  // Scope the shared photo to the one collection card that opens this product.
+  // Normal link navigation still handles history, modifier keys and deep links.
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    window.addEventListener('pageswap', event => {
+      if (!event.viewTransition || !event.activation) return;
+      const destination = new URL(event.activation.entry.url);
+      const clicked = document.activeElement?.closest('a');
+      const card = clicked?.closest('article')?.querySelector('.product-card__image');
+      const photo = clicked?.href === destination.href ? (card || clicked).querySelector('img') : null;
+      if (photo && destination.pathname.startsWith('/products/')) {
+        photo.style.viewTransitionName = 'look-photo';
+        event.viewTransition.finished.finally(() => photo.style.removeProperty('view-transition-name'));
+      }
+    });
+    window.addEventListener('pagereveal', event => {
+      const photo = document.getElementById('main-product-image');
+      if (!event.viewTransition || !photo) return;
+      photo.style.viewTransitionName = 'look-photo';
+      event.viewTransition.finished.finally(() => photo.style.removeProperty('view-transition-name'));
+    });
+  }
   let productsPromise;
   let previousFocus;
 
@@ -34,6 +55,14 @@
     $('#cart-layer').hidden = true;
     document.body.style.overflow = '';
     previousFocus?.focus?.();
+  }
+  function closeMenu(restoreFocus = true) {
+    const menu = $('#mobile-menu');
+    if (menu.hidden) return;
+    menu.hidden = true;
+    const opener = $('[data-menu-open]');
+    opener.setAttribute('aria-expanded', 'false');
+    if (restoreFocus) opener.focus();
   }
   function renderCart() {
     const items = cart();
@@ -140,7 +169,8 @@
     const target = event.target;
     if (!(target instanceof Element)) return;
     if (target.closest('[data-menu-open]')) { const menu = $('#mobile-menu'); menu.hidden = false; $('[data-menu-open]').setAttribute('aria-expanded','true'); menu.querySelector('[data-menu-close]').focus(); }
-    if (target.closest('[data-menu-close]')) { $('#mobile-menu').hidden = true; $('[data-menu-open]').setAttribute('aria-expanded','false'); $('[data-menu-open]').focus(); }
+    if (target.closest('[data-menu-close]')) closeMenu();
+    if (target.closest('#mobile-menu a')) closeMenu(false);
     if (target.closest('[data-search-open]')) { $('#search-panel').hidden = false; $('#site-search').focus(); }
     if (target.closest('[data-search-close]')) { $('#search-panel').hidden = true; $('[data-search-open]').focus(); }
     if (target.closest('[data-cart-open]')) openCart();
@@ -167,7 +197,7 @@
     if (event.target.matches('#sort-products')) sortListing();
   });
   document.addEventListener('keydown', event => {
-    if (event.key === 'Escape') { if (!$('#cart-layer').hidden) closeCart(); $('#mobile-menu').hidden = true; $('#search-panel').hidden = true; }
+    if (event.key === 'Escape') { if (!$('#cart-layer').hidden) closeCart(); closeMenu(); $('#search-panel').hidden = true; }
   });
   updateCartCount(); syncWishlist(); updateVariant(); renderWishlist(); filterSearch();
 })();

@@ -1,0 +1,23 @@
+.textile-study { margin: 0; min-width: 0; }
+.textile-frame {
+  position: relative; overflow: hidden; isolation: isolate; touch-action: pan-y;
+  aspect-ratio: 90 / 67;
+  background: radial-gradient(ellipse at 46% 32%, #f7ede4, #e9dbd1 74%, #dfcfc5);
+}
+.textile-frame::before {
+  content: ''; position: absolute; left: 21%; right: 17%; bottom: 7%; height: 8%;
+  border-radius: 50%; background: radial-gradient(ellipse, #764d4c40, transparent 69%);
+  filter: blur(5px); pointer-events: none;
+}
+.textile-frame canvas, .textile-poster {
+  position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+}
+.textile-poster { object-fit: contain; }
+.textile-frame canvas { opacity: 0; }
+.textile-frame.textile-ready { cursor: grab; }
+.textile-frame.textile-ready:active { cursor: grabbing; }
+.textile-ready canvas { opacity: 1; }
+.textile-ready .textile-poster { opacity: 0; }
+.textile-study figcaption { display: flex; align-items: center; justify-content: space-between; gap: 1em; min-height: 48px; }
+.textile-study [data-textile-turn] { font: inherit; color: inherit; padding: 10px 0; border: none; border-bottom: 1px solid currentColor; background: transparent; cursor: pointer; }
+.textile-study [data-textile-turn][hidden] { display: none; }
