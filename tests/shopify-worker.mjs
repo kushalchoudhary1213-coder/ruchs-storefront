@@ -40,10 +40,10 @@ assert.equal((await response.json()).error, 'This item is sold out.');
 // If the Storefront API fails, or no token is set, a Shopify cart permalink is used.
 shopify = {status: 500, body: {}};
 data = await (await checkout([{id: variant, quantity: 1}], env)).json();
-assert.deepEqual(data, {url: `https://checkout.myruchs.com/cart/${variant}:1?ref=myruchs`, mode: 'permalink'});
+assert.deepEqual(data, {url: `https://www.ruchs.in/cart/${variant}:1?ref=myruchs`, mode: 'permalink'});
 calls.length = 0;
 data = await (await checkout([{id: variant, quantity: 50}])).json();
-assert.deepEqual(data, {url: `https://checkout.myruchs.com/cart/${variant}:10?ref=myruchs`, mode: 'permalink'});
+assert.deepEqual(data, {url: `https://www.ruchs.in/cart/${variant}:10?ref=myruchs`, mode: 'permalink'});
 assert.equal(calls.length, 0);
 
 // A stale page still sending provider "shiprocket" gets the Shopify checkout.
@@ -84,6 +84,6 @@ for (const [from, to] of [['/cart', '/'], ['/cart/', '/'], ['/products', '/colle
 for (const path of ['/account', '/account/login', '/account/orders/123']) {
   assert.equal((await get(path)).headers.get('location'), 'https://shopify.com/93998121332/account', path);
 }
-assert.equal((await get('/cdn/shop/files/a.png')).headers.get('location'), 'https://checkout.myruchs.com/cdn/shop/files/a.png');
+assert.equal((await get('/cdn/shop/files/a.png')).headers.get('location'), 'https://www.ruchs.in/cdn/shop/files/a.png');
 assert.equal((await get('/products/aria-dusk-dress/')).status, 200);
 console.log('Legacy redirects: cart, products, blogs, account and cdn passed');

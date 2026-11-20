@@ -17,9 +17,9 @@ const liveSessionSeconds = 30;
 // permalinks; with SHOPIFY_STOREFRONT_TOKEN set, carts are created through the
 // Storefront API and live stock and prices are served from /api/inventory.
 const shopifyStoreDomain = 'frkcn3-hp.myshopify.com';
-// Shopify's primary domain. It serves checkout, order status and Shopify CDN
-// files; its theme redirects every store page back to myruchs.com.
-const shopifyStorefrontDomain = 'checkout.myruchs.com';
+// The Ruchs Shopify store's primary domain (www.ruchs.in). It serves checkout,
+// order status pages and Shopify CDN files.
+const shopifyStorefrontDomain = 'www.ruchs.in';
 const shopifyCustomerAccountUrl = 'https://shopify.com/93998121332/account';
 // Old ruchs.in paths that have no page of their own on myruchs.com.
 const legacyRedirects = {'/cart': '/', '/products': '/collections/all/', '/blogs': '/blogs/news/'};
