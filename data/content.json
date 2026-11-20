@@ -226,24 +226,44 @@
         "text": "For general enquiries, please email us at ruchsofficial@gmail.com"
       },
       {
+        "tag": "h2",
+        "text": "Frequently asked questions"
+      },
+      {
         "tag": "h3",
-        "text": "Frequently Asked Questions"
+        "text": "Can I contact you about collaborations or partnerships?"
       },
       {
         "tag": "p",
         "text": "Yes! For business and collaboration enquiries, please email us at ruchsofficial@gmail.com with the subject line “Collaboration”."
       },
       {
+        "tag": "h3",
+        "text": "Can I update or cancel my order through customer support?"
+      },
+      {
         "tag": "p",
         "text": "Yes, you can contact us as soon as possible after placing your order, and we’ll try to assist before dispatch."
+      },
+      {
+        "tag": "h3",
+        "text": "How do I exchange a product?"
       },
       {
         "tag": "p",
         "text": "If you need a different size or style, you can place an exchange request through our support team. We’ll guide you through the simple process."
       },
       {
+        "tag": "h3",
+        "text": "Are Ruchs products sustainable?"
+      },
+      {
         "tag": "p",
         "text": "Yes. Ruchs is committed to conscious fashion by using eco-friendly fabrics, responsible sourcing, and low-waste production practices wherever possible."
+      },
+      {
+        "tag": "h3",
+        "text": "Do you offer discounts or promotions?"
       },
       {
         "tag": "p",
@@ -274,36 +294,24 @@
         "text": "Real people making great products"
       },
       {
-        "tag": "h2",
-        "text": "0"
+        "tag": "stat",
+        "value": "3,000",
+        "text": "Trees planted"
       },
       {
-        "tag": "p",
-        "text": "Trees Planted"
+        "tag": "stat",
+        "value": "27,000",
+        "text": "Plastic recycled"
       },
       {
-        "tag": "h2",
-        "text": "0"
+        "tag": "stat",
+        "value": "540",
+        "text": "Water saved"
       },
       {
-        "tag": "p",
-        "text": "Plastic Recycled"
-      },
-      {
-        "tag": "h2",
-        "text": "0"
-      },
-      {
-        "tag": "p",
-        "text": "Water Saved"
-      },
-      {
-        "tag": "h2",
-        "text": "0"
-      },
-      {
-        "tag": "p",
-        "text": "Artisans Supported"
+        "tag": "stat",
+        "value": "680",
+        "text": "Artisans supported"
       }
     ],
     "/pages/swym-wishlist": [],

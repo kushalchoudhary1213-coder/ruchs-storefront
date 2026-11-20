@@ -19,7 +19,7 @@ DEFAULT_SHARE_IMAGE = "/showcase/brand-share.jpg"
 # Tracking IDs carried over from the ruchs.in theme (Google & YouTube and Meta apps).
 GA_MEASUREMENT_ID = "G-M0EHDZSDPJ"
 META_PIXEL_ID = "1412294113670313"
-NOINDEX_ROUTES = {"/search/", "/pages/swym-wishlist/"}
+NOINDEX_ROUTES = {"/search/", "/pages/swym-wishlist/", "/404/"}
 
 pages = {}
 for path in dist.rglob("index.html"):

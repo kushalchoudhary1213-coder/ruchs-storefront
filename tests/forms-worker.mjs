@@ -72,3 +72,13 @@ assert.equal((await (await status({DB: quotaDb, GENLOOK_API_KEY: 'k'})).json()).
 assert.equal((await (await status({DB: quotaDb, GENLOOK_API_KEY: 'k', TRYON_DAILY_LIMIT: '20'})).json()).available, true);
 
 console.log('Forms, SEO, caching and try-on limit settings passed');
+
+// Unknown addresses get the branded page with a real 404 status, kept out of search.
+const missing = await worker.fetch(new Request(`${origin}/products/not-a-real-dress/`), {}, {});
+assert.equal(missing.status, 404);
+assert.equal(missing.headers.get('x-robots-tag'), 'noindex');
+const missingHtml = await missing.text();
+assert.match(missingHtml, /We couldn’t find that page/);
+assert.match(missingHtml, /href="\/collections\/all\/"/);
+assert.doesNotMatch(await (await worker.fetch(new Request(`${origin}/sitemap.xml`), {}, {})).text(), /\/404\//);
+console.log('Branded 404 page passed');

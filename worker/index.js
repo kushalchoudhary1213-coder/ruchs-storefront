@@ -525,6 +525,9 @@ export default {
       const cacheControl = versioned ? 'public, max-age=31536000, immutable' : 'public, max-age=300';
       return new Response(request.method === 'HEAD' ? null : asset.content, {headers: {'content-type': asset.type, 'cache-control': cacheControl}});
     }
+    // Unknown addresses get the branded page with a real 404 status.
+    const notFound = pages['/404/'];
+    if (notFound) return new Response(request.method === 'HEAD' ? null : notFound, {status: 404, headers: {'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache', 'x-robots-tag': 'noindex'}});
     return new Response('Not found', {status: 404});
   },
 };

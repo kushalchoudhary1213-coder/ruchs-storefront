@@ -112,6 +112,7 @@
     const menu = $('#mobile-menu');
     if (menu.hidden) return;
     menu.hidden = true;
+    if ($('#cart-layer').hidden) document.body.style.overflow = '';
     const opener = $('[data-menu-open]');
     opener.setAttribute('aria-expanded', 'false');
     if (restoreFocus) opener.focus();
@@ -279,6 +280,9 @@
     const grid = $('#listing-grid');
     if (!grid) return;
     const mode = $('#sort-products').value;
+    const url = new URL(location.href);
+    if (mode && mode !== 'featured') url.searchParams.set('sort', mode); else url.searchParams.delete('sort');
+    history.replaceState(history.state, '', url);
     const cards = [...grid.querySelectorAll('.product-card')];
     cards.sort((a,b) => mode === 'price-low' ? Number(a.dataset.price) - Number(b.dataset.price) : mode === 'price-high' ? Number(b.dataset.price) - Number(a.dataset.price) : mode === 'name' ? a.dataset.title.localeCompare(b.dataset.title) : Number(a.dataset.order) - Number(b.dataset.order));
     cards.forEach(card => grid.appendChild(card));
@@ -287,7 +291,7 @@
   document.addEventListener('click', event => {
     const target = event.target;
     if (!(target instanceof Element)) return;
-    if (target.closest('[data-menu-open]')) { const menu = $('#mobile-menu'); menu.hidden = false; $('[data-menu-open]').setAttribute('aria-expanded','true'); menu.querySelector('[data-menu-close]').focus(); }
+    if (target.closest('[data-menu-open]')) { const menu = $('#mobile-menu'); menu.hidden = false; document.body.style.overflow = 'hidden'; $('[data-menu-open]').setAttribute('aria-expanded','true'); menu.querySelector('[data-menu-close]').focus(); }
     if (target.closest('[data-menu-close]')) closeMenu();
     if (target.closest('#mobile-menu a')) closeMenu(false);
     if (target.closest('[data-search-open]')) { $('#search-panel').hidden = false; $('#site-search').focus(); }
@@ -355,6 +359,15 @@
   });
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape') { if (!$('#cart-layer').hidden) closeCart(); closeMenu(); $('#search-panel').hidden = true; }
+    if (event.key === 'Tab') {
+      const open = !$('#cart-layer').hidden ? $('#cart-layer .cart-drawer') : !$('#mobile-menu').hidden ? $('#mobile-menu') : null;
+      if (!open) return;
+      const items = [...open.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])')].filter(node => node.offsetParent !== null);
+      if (!items.length) return;
+      const first = items[0], last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    }
   });
   // Phone buy bar: shown while the page's own Add to bag row is off screen.
   const buyBar = $('[data-buy-bar]');
@@ -367,6 +380,10 @@
       buyBar.querySelector('[data-buy-bar-add]').tabIndex = show ? 0 : -1;
     }).observe(buyRow);
   }
+
+  const sortSelect = $('#sort-products');
+  const sortFromUrl = new URLSearchParams(location.search).get('sort');
+  if (sortSelect && sortFromUrl && [...sortSelect.options].some(option => option.value === sortFromUrl)) { sortSelect.value = sortFromUrl; sortListing(); }
 
   updateCartCount(); syncWishlist(); updateVariant(); renderWishlist(); filterSearch(); refreshCartPrices();
 })();
