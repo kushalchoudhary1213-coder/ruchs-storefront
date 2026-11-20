@@ -153,3 +153,28 @@
 }
 html.lenis { scroll-behavior: auto; }
 html.lenis.lenis-stopped { overflow: clip; }
+
+/* Polish: lookbook caption floor and a pause control for the looping film. */
+.sc-look-caption p { font-size: 11px; }
+.sc-film-toggle { position: absolute; right: var(--sc-edge); bottom: clamp(40px, 7vh, 86px); z-index: 2; width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid rgba(255, 255, 240, .55); border-radius: 50%; background: rgba(42, 20, 32, .38); color: #fffff0; cursor: pointer; transition: background-color var(--duration-fast, 250ms) var(--ease-smooth-out, ease-out), border-color var(--duration-fast, 250ms) var(--ease-smooth-out, ease-out); }
+.sc-film-toggle:hover { background: rgba(75, 21, 57, .72); border-color: #e6b19b; }
+.sc-film-toggle:focus-visible { outline: 3px solid #e6b19b; outline-offset: 3px; }
+.sc-film-toggle svg { width: 18px; height: 18px; }
+.sc-film-toggle .sc-film-play, .sc-film-toggle[data-state="paused"] .sc-film-pause { display: none; }
+.sc-film-toggle[data-state="paused"] .sc-film-play { display: grid; }
+.sc-film-toggle span { display: grid; place-items: center; }
+
+/* The lookbook is the page's one bold moment: a wine room, as in the Ruchs logo artwork. */
+.sc-rail, .sc-pin, .sc-look-plates { background: #4b1539; }
+.sc-rail { color: #fffff0; }
+.sc-rail .sc-section-heading h2 { color: #fffff0; }
+.sc-rail .sc-look-caption p { color: #e6b19b; }
+.sc-rail .sc-look-caption > span { color: #f2dfd8; }
+.sc-rail .sc-look a:hover h3 { color: #e6b19b; }
+.sc-rail .sc-look-caption h3 { transition: color var(--duration-fast, 250ms) var(--ease-smooth-out, ease-out); }
+.sc-rail .sc-progress-rule { background: rgba(230, 177, 155, .28); }
+.sc-rail .sc-progress-rule > span { background: #e6b19b; }
+.sc-rail .sc-rail-controls button { border-color: rgba(255, 255, 240, .5); color: #fffff0; background: transparent; }
+.sc-rail .sc-rail-controls button:hover { background: #fffff0; color: #4b1539; }
+.sc-rail .sc-window:focus-visible, .sc-rail .sc-look a:focus-visible, .sc-rail .sc-rail-controls button:focus-visible { outline-color: #e6b19b; }
+.sc-rail .sc-window { scrollbar-color: #b85c64 #4b1539; }

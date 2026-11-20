@@ -42,3 +42,6 @@
   .live-stage { min-height: 350px; }
   .live-close { right: 12px; top: 12px; }
 }
+
+/* Polish: readable minimum text size. */
+.live-piece span, .live-piece small, .live-notice, .live-placeholder span, .live-stage-label { font-size: 11px; }

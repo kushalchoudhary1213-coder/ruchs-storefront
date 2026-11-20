@@ -7,8 +7,14 @@
   src: url('./cormorant-garamond-italic.woff2') format('woff2');
 }
 @font-face {
-  font-family: Montserrat; font-style: normal; font-weight: 400 600; font-display: swap;
-  src: url('./montserrat-normal.woff2') format('woff2');
+  font-family: Jost; font-style: normal; font-weight: 300 700; font-display: swap;
+  src: url('./jost-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: Jost; font-style: normal; font-weight: 300 700; font-display: swap;
+  src: url('./jost-normal-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 :root {
   --ivory: #fffff0; --paper: #fffdf5; --ink: #2a1420; --plum: #4b1539;
@@ -106,3 +112,24 @@ html { scroll-padding-top: var(--mast-height); }
   .brand-wordmark { height: 19px; }
   .brand--logo { gap: 8px; }
 }
+
+/* Polish: readable minimum text size. */
+.site-footer .brand--footer small { font-size: 11px; letter-spacing: .24em; }
+.fitting-options .button { font-size: 11px; }
+
+/* Sentence case for interface text: words, not tracked capitals, carry the labels. */
+.eyebrow, .announcement, .mobile-menu__top, .search-panel label, .search-page-form label, .button, .text-link,
+.product-card__view, .collection-chip, .variant-group legend, .product-accordions summary, .search-count,
+.footer-main h2, .footer-bottom, .price-save, .contact-form label, .live-stage-label {
+  text-transform: none; letter-spacing: .01em;
+}
+.button { font-size: 14px; font-weight: 500; }
+.fitting-options .button { font-size: 14px; }
+.text-link, .product-card__view, .collection-chip { font-size: 14px; font-weight: 500; }
+.variant-group legend, .contact-form label { font-size: 14px; font-weight: 500; }
+.product-accordions summary { font-size: 15px; font-weight: 500; }
+.site-footer .footer-main h2 { font: 500 22px/1.2 var(--display); letter-spacing: 0; }
+.footer-bottom, .search-count { font-size: 13px; }
+.price-save { font-size: 12px; letter-spacing: .02em; }
+.cart-checkout .button small { font-size: 12px; }
+.product-accordions details p, .product-accordions details > div, .article-content p { max-width: 34em; }

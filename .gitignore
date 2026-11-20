@@ -50,3 +50,7 @@ next-env.d.ts
 
 # Local temp files
 temp/
+
+# Installed agent skills (restore: npx skills experimental_install; npx impeccable install --providers=claude --project --no-hooks)
+.claude/skills/
+.claude/agents/

@@ -118,7 +118,8 @@ function initShowcase(root) {
     pin = tween.scrollTrigger;
     updateRail();
     return () => {
-      tween.scrollTrigger.kill();
+      // gsap.matchMedia may already have reverted this tween when the breakpoint changes.
+      tween.scrollTrigger?.kill();
       tween.kill();
       pin = null;
       rail.classList.remove('sc-rail-enhanced');

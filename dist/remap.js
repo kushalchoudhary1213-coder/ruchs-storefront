@@ -255,6 +255,21 @@
     const checkoutButton = target.closest('[data-checkout]');
     if (checkoutButton && !checkoutButton.disabled) startCheckout(checkoutButton);
   });
+  // The homepage film loops silently. It has a pause control (motion over five
+  // seconds must be stoppable) and stays on its poster under reduced motion.
+  const film = $('[data-film]');
+  const filmToggle = $('[data-film-toggle]');
+  if (film && filmToggle) {
+    const setFilm = playing => {
+      filmToggle.setAttribute('aria-label', playing ? 'Pause the film' : 'Play the film');
+      filmToggle.dataset.state = playing ? 'playing' : 'paused';
+      if (playing) film.play?.().catch(() => setFilm(false)); else film.pause();
+    };
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { film.removeAttribute('autoplay'); setFilm(false); }
+    else filmToggle.dataset.state = 'playing';
+    filmToggle.addEventListener('click', () => setFilm(film.paused));
+  }
+
   // Newsletter and contact forms post to the Worker without leaving the page.
   document.addEventListener('submit', async event => {
     const form = event.target.closest?.('[data-ajax-form]');

@@ -82,3 +82,7 @@
   .tryon-result { min-height: 340px; }
   .tryon-close { right: 12px; top: 12px; }
 }
+
+/* Polish: readable minimum text size. */
+.tryon-source span, .tryon-upload span, .tryon-source small, .tryon-upload small, .tryon-placeholder span { font-size: 11px; }
+.tryon-privacy { font-size: 11px !important; }

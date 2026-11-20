@@ -4,7 +4,7 @@ import { defineConfig, globalIgnores } from "eslint/config";
 
 export default defineConfig([
   // Generated output and third-party theme files are not linted.
-  globalIgnores(["dist/**", "shopify-theme/**", "node_modules/**", ".wrangler/**"]),
+  globalIgnores(["dist/**", "shopify-theme/**", "node_modules/**", ".wrangler/**", ".claude/**"]),
   js.configs.recommended,
   {
     // Browser scripts served by the storefront.
