@@ -22,16 +22,13 @@ The live panel uses Decart Lucy VTON 3.6 to transform the shopper's camera strea
 
 The product pages, collections, search, wishlist, and informational routes are local. Cart and wishlist changes are saved in the browser.
 
-## Shopify and Shiprocket checkout
+## Shopify checkout
 
 The Ruchs Shopify store (`frkcn3-hp.myshopify.com`, www.ruchs.in) is the commerce backend. Its Headless sales channel provides a Storefront API private token, stored as the Worker secret `SHOPIFY_STOREFRONT_TOKEN`. With it, `GET /api/inventory` serves live stock and prices for the catalog variants (cached for 60 seconds), and product pages and the bag use them in place of the build-time snapshot.
 
-The bag offers two checkouts through `POST /api/checkout`. Both accept only known catalog variants, at most 10 of each and 20 lines, from the storefront's own origin.
+The bag's Checkout button calls `POST /api/checkout`, which accepts only known catalog variants, at most 10 of each and 20 lines, from the storefront's own origin. It creates a cart through the Storefront API and opens Shopify checkout. If the Storefront API is unavailable, a Shopify cart permalink opens the same checkout. Shopify reports sold-out items back to the bag.
 
-- **Buy now** (`provider: "shiprocket"`) uses the store's Shiprocket (Fastrr) checkout. Without Shiprocket keys it fills the www.ruchs.in cart with the bag and opens that cart page, where the Shiprocket BUY NOW button completes the order. With `SHIPROCKET_CHECKOUT_API_KEY` and `SHIPROCKET_CHECKOUT_SECRET` set as Worker secrets, the Worker signs a Shiprocket headless checkout token and the Shiprocket popup opens on this site, falling back to the cart page if Shiprocket refuses it.
-- **Shopify checkout** (`provider: "shopify"`) creates a cart through the Storefront API and opens Shopify checkout, where Razorpay takes payment. If the Storefront API is unavailable, a Shopify cart permalink opens the same checkout.
-
-Orders, payments, refunds, and fulfilment are handled in Shopify admin and Shiprocket. The Worker never receives payment details.
+Payment methods come from Shopify's payment settings: Razorpay for UPI, cards, NetBanking and wallets, and Shopify's manual Cash on Delivery method. Orders, payments, refunds, and fulfilment are handled in Shopify admin. The Worker never receives payment details.
 
 ## Cloudflare hosting
 

@@ -46,39 +46,14 @@ data = await (await checkout([{id: variant, quantity: 50}])).json();
 assert.deepEqual(data, {url: `https://www.ruchs.in/cart/${variant}:10?ref=myruchs`, mode: 'permalink'});
 assert.equal(calls.length, 0);
 
-// Shiprocket: without keys, Buy now opens the ruchs.in cart page (Shiprocket BUY NOW).
-const shiprocketCheckout = (lines, env) => worker.fetch(new Request(`${origin}/api/checkout`, {
+// A stale page still sending provider "shiprocket" gets the Shopify checkout.
+shopify = {status: 200, body: {data: {cartCreate: {cart: {checkoutUrl: 'https://www.ruchs.in/cart/c/def?key=2'}, userErrors: []}}}};
+data = await (await worker.fetch(new Request(`${origin}/api/checkout`, {
   method: 'POST', headers: {'content-type': 'application/json', origin},
-  body: JSON.stringify({provider: 'shiprocket', lines}),
-}), env, {});
-const cartPage = `https://www.ruchs.in/cart/${variant}:2?storefront=true&ref=myruchs`;
-data = await (await shiprocketCheckout([{id: variant, quantity: 2}], env)).json();
-assert.deepEqual(data, {url: cartPage, mode: 'shiprocket-cart'});
-assert.equal(calls.length, 0);
-
-// With keys, the Worker returns a signed Shiprocket headless checkout token.
-const shiprocketEnv = {...env, SHIPROCKET_CHECKOUT_API_KEY: 'sr-key', SHIPROCKET_CHECKOUT_SECRET: 'sr-secret'};
-let shiprocket = {status: 200, body: {result: {token: 'sr-checkout-token'}}};
-const shopifyFetch = globalThis.fetch;
-globalThis.fetch = async (input, options = {}) => {
-  if (String(input) !== 'https://checkout-api.shiprocket.com/api/v1/access-token/checkout') return shopifyFetch(input, options);
-  calls.push({url: String(input), options});
-  return new Response(JSON.stringify(shiprocket.body), {status: shiprocket.status});
-};
-data = await (await shiprocketCheckout([{id: variant, quantity: 2}], shiprocketEnv)).json();
-assert.deepEqual(data, {token: 'sr-checkout-token', fallbackUrl: cartPage, mode: 'shiprocket'});
-const signed = calls.at(-1);
-const signedBody = JSON.parse(signed.options.body);
-assert.deepEqual(signedBody.cart_data.items, [{variant_id: variant, quantity: 2}]);
-assert.equal(signedBody.redirect_url, `${origin}/?checkout=complete`);
-const {createHmac} = await import('node:crypto');
-assert.equal(signed.options.headers['X-Api-Key'], 'sr-key');
-assert.equal(signed.options.headers['X-Api-HMAC-SHA256'], createHmac('sha256', 'sr-secret').update(signed.options.body).digest('base64'));
-// If Shiprocket refuses the token, Buy now still opens the ruchs.in cart page.
-shiprocket = {status: 401, body: {}};
-data = await (await shiprocketCheckout([{id: variant, quantity: 2}], shiprocketEnv)).json();
-assert.deepEqual(data, {url: cartPage, mode: 'shiprocket-cart'});
-globalThis.fetch = shopifyFetch;
+  body: JSON.stringify({provider: 'shiprocket', lines: [{id: variant, quantity: 1}]}),
+}), env, {})).json();
+assert.deepEqual(data, {url: 'https://www.ruchs.in/cart/c/def?key=2', mode: 'storefront'});
+assert.ok(!calls.some(call => call.url.includes('shiprocket')));
 calls.length = 0;
 
 // Requests from other origins, unknown variants and bad quantities are refused.

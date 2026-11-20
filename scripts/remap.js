@@ -29,7 +29,7 @@
       event.viewTransition.finished.finally(() => photo.style.removeProperty('view-transition-name'));
     });
   }
-  const cartNote = 'Taxes included. Offers, shipping and payment are completed on the secure Ruchs checkout.';
+  const cartNote = 'Taxes included. Shipping and payment are completed on the secure Ruchs checkout.';
   let productsPromise;
   let previousFocus;
 
@@ -65,56 +65,25 @@
     }
     if (changed) { write(CART_KEY, items); if (!$('#cart-layer').hidden) renderCart(); }
   }
-  // Shiprocket's checkout script (the one ruchs.in uses) loads only when a
-  // shopper chooses Buy now, so it never slows down browsing.
-  let shiprocketReady;
-  function loadShiprocket() {
-    return shiprocketReady ||= new Promise((resolve, reject) => {
-      if (window.HeadlessCheckout) return resolve();
-      const styles = document.createElement('link');
-      styles.rel = 'stylesheet';
-      styles.href = 'https://fastrr-boost-ui.pickrr.com/assets/styles/sr-checkout.css';
-      document.head.appendChild(styles);
-      const script = document.createElement('script');
-      script.src = 'https://fastrr-boost-ui.pickrr.com/assets/js/channels/shopify.js';
-      script.async = true;
-      script.onload = () => window.HeadlessCheckout ? resolve() : reject(new Error('shiprocket-missing'));
-      script.onerror = () => reject(new Error('shiprocket-unavailable'));
-      document.head.appendChild(script);
-    }).catch(error => { shiprocketReady = null; throw error; });
-  }
-  async function startCheckout(button, event) {
+  async function startCheckout(button) {
     const note = $('.cart-note');
     const items = cart();
     if (!items.length) return;
-    const provider = button.dataset.checkout === 'shiprocket' ? 'shiprocket' : 'shopify';
-    const buttons = $$('[data-checkout]');
-    buttons.forEach(node => { node.disabled = true; });
+    button.disabled = true;
     note.setAttribute('role', 'status');
     note.textContent = 'Opening secure checkout…';
     try {
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: {'content-type': 'application/json'},
-        body: JSON.stringify({provider, lines: items.map(item => ({id: item.id, quantity: item.quantity}))}),
+        body: JSON.stringify({lines: items.map(item => ({id: item.id, quantity: item.quantity}))}),
       });
       const data = await response.json();
-      if (!response.ok || !(data.url || data.token)) throw new Error(data.error || 'Checkout is unavailable right now. Please try again.');
-      if (data.token) {
-        try {
-          await loadShiprocket();
-          window.HeadlessCheckout.addToCart(event, data.token, {fallbackUrl: data.fallbackUrl});
-          note.textContent = cartNote;
-          buttons.forEach(node => { node.disabled = false; });
-        } catch {
-          location.href = data.fallbackUrl;
-        }
-        return;
-      }
+      if (!response.ok || !data.url) throw new Error(data.error || 'Checkout is unavailable right now. Please try again.');
       location.href = data.url;
     } catch (error) {
       note.textContent = error.message || 'Checkout is unavailable right now. Please try again.';
-      buttons.forEach(node => { node.disabled = false; });
+      button.disabled = false;
     }
   }
 
@@ -158,7 +127,7 @@
     }
     lines.innerHTML = items.map(item => `<article class="cart-line"><a href="/products/${escapeHTML(item.handle)}/"><img src="${escapeHTML(item.image)}" alt="${escapeHTML(item.title)}"></a><div><h3><a href="/products/${escapeHTML(item.handle)}/">${escapeHTML(item.title)}</a></h3><p>${escapeHTML(item.variant)}</p><strong>${money(item.price)}</strong><div class="cart-line__qty"><button type="button" data-cart-minus="${item.id}" aria-label="Decrease ${escapeHTML(item.title)} quantity">−</button><span>${item.quantity}</span><button type="button" data-cart-plus="${item.id}" aria-label="Increase ${escapeHTML(item.title)} quantity">+</button><button type="button" class="cart-remove" data-cart-remove="${item.id}">Remove</button></div></div></article>`).join('');
     const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    foot.innerHTML = `<div class="cart-subtotal"><span>Subtotal</span><strong>${money(subtotal)}</strong></div><div class="cart-checkout"><button type="button" class="button button-dark" data-checkout="shiprocket">Buy now <small>Shiprocket · UPI, cards &amp; COD</small></button><button type="button" class="button button-outline" data-checkout="shopify">Shopify checkout <small>Razorpay · UPI &amp; cards</small></button></div><p class="cart-note">${cartNote}</p>`;
+    foot.innerHTML = `<div class="cart-subtotal"><span>Subtotal</span><strong>${money(subtotal)}</strong></div><div class="cart-checkout"><button type="button" class="button button-dark" data-checkout>Checkout <small>UPI, cards &amp; cash on delivery</small></button></div><p class="cart-note">${cartNote}</p>`;
   }
 
   function toggleWishlist(handle) {
@@ -271,7 +240,7 @@
       write(CART_KEY, items.filter(item => item.quantity > 0)); renderCart();
     }
     const checkoutButton = target.closest('[data-checkout]');
-    if (checkoutButton && !checkoutButton.disabled) startCheckout(checkoutButton, event);
+    if (checkoutButton && !checkoutButton.disabled) startCheckout(checkoutButton);
   });
   document.addEventListener('change', event => {
     if (event.target.matches('.variant-choice input')) updateVariant();

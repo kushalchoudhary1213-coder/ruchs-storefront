@@ -302,53 +302,11 @@ function cartLines(value) {
   return [...merged].map(([id, quantity]) => ({id, quantity}));
 }
 
-// A Shopify cart permalink opens Shopify checkout with the bag's items (backup
-// for the Storefront API). With toCartPage it opens the ruchs.in cart page
-// instead, where the store's Shiprocket (Fastrr) BUY NOW checkout runs.
-function cartPermalink(lines, toCartPage = false) {
+// Backup checkout path: a Shopify cart permalink opens Shopify checkout with
+// the bag's items when the Storefront API is unavailable.
+function cartPermalink(lines) {
   const items = lines.map(line => `${line.id}:${line.quantity}`).join(',');
-  return `https://${shopifyStorefrontDomain}/cart/${items}?${toCartPage ? 'storefront=true&' : ''}ref=myruchs`;
-}
-
-// Shiprocket (Fastrr) checkout on myruchs.com itself: with the store's
-// Shiprocket Checkout API key and secret, the Worker signs the cart and the
-// browser opens the same checkout popup as ruchs.in (HeadlessCheckout.addToCart).
-// Without the keys, shoppers reach it through the ruchs.in cart page.
-const shiprocketCheckoutApi = 'https://checkout-api.shiprocket.com/api/v1/access-token/checkout';
-
-async function hmacBase64(secret, message) {
-  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), {name: 'HMAC', hash: 'SHA-256'}, false, ['sign']);
-  const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(message));
-  return btoa(String.fromCharCode(...new Uint8Array(signature)));
-}
-
-async function shiprocketCheckout(lines, origin, env) {
-  const fallbackUrl = cartPermalink(lines, true);
-  if (!env.SHIPROCKET_CHECKOUT_API_KEY || !env.SHIPROCKET_CHECKOUT_SECRET) return json({url: fallbackUrl, mode: 'shiprocket-cart'});
-  try {
-    const body = JSON.stringify({
-      cart_data: {items: lines.map(line => ({variant_id: line.id, quantity: line.quantity}))},
-      redirect_url: `${origin}/?checkout=complete`,
-      timestamp: new Date().toISOString(),
-    });
-    const response = await timedFetch(shiprocketCheckoutApi, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'X-Api-Key': env.SHIPROCKET_CHECKOUT_API_KEY,
-        'X-Api-HMAC-SHA256': await hmacBase64(env.SHIPROCKET_CHECKOUT_SECRET, body),
-      },
-      body,
-    }, 15000);
-    if (!response.ok) throw new Error(`shiprocket-status-${response.status}`);
-    const data = await response.json();
-    const token = data?.result?.token ?? data?.token;
-    if (typeof token !== 'string' || !token) throw new Error('shiprocket-missing-token');
-    return json({token, fallbackUrl, mode: 'shiprocket'});
-  } catch (error) {
-    console.error('Shiprocket checkout token unavailable', error?.message || 'unknown');
-    return json({url: fallbackUrl, mode: 'shiprocket-cart'});
-  }
+  return `https://${shopifyStorefrontDomain}/cart/${items}?ref=myruchs`;
 }
 
 async function storefrontQuery(request, env, query, variables) {
@@ -383,7 +341,6 @@ async function checkout(request, env) {
   catch { return json({error: 'Your bag could not be read.'}, 400); }
   const lines = cartLines(fields);
   if (!lines) return json({error: 'Your bag has an item that is no longer available. Please remove it and try again.'}, 400);
-  if (fields.provider === 'shiprocket') return shiprocketCheckout(lines, origin, env);
 
   if (env.SHOPIFY_STOREFRONT_TOKEN) {
     try {
