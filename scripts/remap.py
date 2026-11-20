@@ -32,6 +32,7 @@ ICONS = {
     "chevron": '<path d="m6 9 6 6 6-6"/>',
     "minus": '<path d="M4 12h16"/>',
     "plus": '<path d="M4 12h16M12 4v16"/>',
+    "star": '<path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9Z"/>',
     "pause": '<path d="M9 5v14M15 5v14"/>',
     "play": '<path d="M8 5.5v13l11-6.5-11-6.5Z"/>',
     "user": '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
@@ -226,6 +227,26 @@ def listing(slug: str, details: dict) -> str:
     return page(title, body, f"Shop {title.lower()} from Ruchs.")
 
 
+# Standard Indian women's body measurements (inches). A general guide only:
+# Ruchs has not published garment measurements, and fit varies by piece.
+SIZE_CHART = [("XS", 32, 26, 35), ("S", 34, 28, 37), ("M", 36, 30, 39), ("L", 38, 32, 41),
+              ("XL", 40, 34, 43), ("2XL", 42, 36, 45), ("3XL", 44, 38, 47)]
+
+
+def size_guide() -> str:
+    rows = "".join(
+        f"<tr><th scope=\"row\">{size}</th><td>{bust} in <span>{round(bust * 2.54)} cm</span></td><td>{waist} in <span>{round(waist * 2.54)} cm</span></td><td>{hip} in <span>{round(hip * 2.54)} cm</span></td></tr>"
+        for size, bust, waist, hip in SIZE_CHART
+    )
+    return f'''<details class="size-guide"><summary>Size guide {icon('chevron')}</summary><div class="size-guide__body">
+      <p>Body measurements for each size. Where a piece comes in a combined size such as XS – S, it is cut to fit both.</p>
+      <div class="size-guide__table"><table><caption class="visually-hidden">Body measurements by size</caption><thead><tr><th scope="col">Size</th><th scope="col">Bust</th><th scope="col">Waist</th><th scope="col">Hip</th></tr></thead><tbody>{rows}</tbody></table></div>
+      <h3>How to measure</h3>
+      <ul><li><strong>Bust:</strong> around the fullest part of your chest, keeping the tape level.</li><li><strong>Waist:</strong> around your natural waist, the narrowest part of your torso.</li><li><strong>Hip:</strong> around the fullest part of your hips, feet together.</li></ul>
+      <p>Between two sizes? Choose the larger for a relaxed fit. This is a general guide, so fit can vary by piece. For help choosing, <a href="/pages/contact/">write to us</a>.</p>
+    </div></details>'''
+
+
 def product_detail(product: dict) -> str:
     title = text(product["title"])
     images = product["images"]
@@ -238,6 +259,8 @@ def product_detail(product: dict) -> str:
         preselect = len(values) == 1 or "size" not in option["name"].lower()
         group = ''.join(f'<label class="variant-choice"><input type="radio" name="option-{option["position"]}" value="{text(value)}" {"checked" if preselect and i==0 else ""}><span>{text(value)}</span></label>' for i,value in enumerate(values))
         option_groups.append(f'<fieldset class="variant-group"><legend>{text(option["name"].strip().capitalize())}</legend><div>{group}</div><p class="variant-error" data-variant-error role="alert" hidden></p></fieldset>')
+        if "size" in option["name"].lower() and len(values) > 1 and not any("size-guide" in g for g in option_groups):
+            option_groups.append(size_guide())
     description = BeautifulSoup(product.get("body_html") or "", "html.parser")
     first_paragraph = description.find("p")
     summary = first_paragraph.get_text(" ", strip=True) if first_paragraph else ""
@@ -258,7 +281,7 @@ def product_detail(product: dict) -> str:
     live_modal = f'''<div class="live-layer" id="live-tryon-layer" hidden><div class="live-backdrop" data-live-close></div><section class="live-dialog" role="dialog" aria-modal="true" aria-labelledby="live-title" aria-describedby="live-description"><button type="button" class="icon-button live-close" data-live-close data-live-close-button aria-label="Close live try-on">{icon('close')}</button><div class="live-copy"><h2 id="live-title">See it in <em>motion.</em></h2><p id="live-description">Try the {title} on through your camera. This live AI preview follows your movement, but does not measure size or fit.</p><div class="live-piece"><img src="{first_image(product)}" alt="{title}" data-live-garment><div><span>Your piece</span><strong>{title}</strong><small>Current product photo</small></div></div><button type="button" class="button button-dark live-start" data-live-start disabled>Start live try-on {icon('arrow')}</button><button type="button" class="button button-outline live-stop" data-live-stop hidden>Stop camera {icon('close')}</button><p class="live-status" data-live-status role="status" aria-live="polite"></p><p class="live-notice">Your camera video is sent to Decart only while the live session runs. Each session lasts at most 30 seconds and uses Decart credits. This catalog uses model photos, so garment details may vary in the live preview.</p></div><div class="live-visual"><div class="live-stage" data-live-stage><video class="live-camera" data-live-camera autoplay muted playsinline aria-label="Your camera preview"></video><video class="live-result" data-live-result autoplay muted playsinline aria-label="AI live try-on result"></video><div class="live-placeholder"><span>Live virtual try-on</span><p>Your fitting starts here.</p></div></div><div class="live-stage-label"><span>Live preview</span><span data-live-timer></span></div></div></section></div>'''
     body = f'''<div class="breadcrumbs wrap"><a href="/">Home</a><span>/</span><a href="/collections/all/">Shop</a><span>/</span><span>{title}</span></div>
       <section class="product-detail wrap" data-product-handle="{text(product['handle'])}" data-live-prompt="{text(live_prompt)}"><div class="product-gallery"><div class="product-gallery__main"><img id="main-product-image" src="{first_image(product)}" alt="{title}" width="{images[0].get('width',800)}" height="{images[0].get('height',1100)}"></div><div class="product-gallery__thumbs" aria-label="Product photos">{gallery}</div></div>
-      <div class="product-information"><h1>{title}</h1><p class="product-price" id="product-price">{price(product)}</p><p class="product-intro">{text(summary)}</p>
+      <div class="product-information"><h1>{title}</h1><a class="rating-summary" href="#reviews" data-rating-summary hidden></a><p class="product-price" id="product-price">{price(product)}</p><p class="product-intro">{text(summary)}</p>
       {''.join(option_groups)}<div class="buy-row"><div class="quantity-control" aria-label="Quantity"><button type="button" data-qty-minus aria-label="Decrease quantity">{icon('minus')}</button><input id="product-quantity" type="number" inputmode="numeric" min="1" value="1" aria-label="Quantity"><button type="button" data-qty-plus aria-label="Increase quantity">{icon('plus')}</button></div><button type="button" class="button button-dark add-button" data-add-to-cart>Add to bag {icon('arrow')}</button></div>
       <ul class="buy-facts"><li>Dispatched within 3–7 business days, then usually 3–7 business days to arrive within India.</li><li>Pay online with UPI or cards, or choose cash on delivery.</li><li>Damaged, defective or wrong item? Report it within 2 days of delivery for an exchange. <a href="/policies/refund-policy/">Exchange policy</a></li></ul>
       <fieldset class="fitting-options"><legend>Virtual fitting room</legend><div>
@@ -266,6 +289,21 @@ def product_detail(product: dict) -> str:
       <button type="button" class="button button-outline live-launch" data-live-open>Try it on live {icon('arrow')}</button></div></fieldset>
       <button type="button" class="save-product" data-wish="{text(product['handle'])}" aria-pressed="false">{icon('heart')} Save to wishlist</button>
       <div class="product-accordions"><details open><summary>Details {icon('chevron')}</summary><div>{str(description)}</div></details><details><summary>Shipping & exchanges {icon('chevron')}</summary><p>Orders are dispatched within 3–7 business days. Delivery within India usually takes 3–7 business days after that, and you get a tracking link when your order ships. Shipping charges are shown at checkout.</p><p>Exchanges are offered for damaged, defective or wrong items reported within 2 days of delivery, unused and in original packaging. Sale items and gift cards can’t be exchanged, and refunds aren’t given as money.</p><p><a href="/policies/shipping-policy/">Shipping policy</a> · <a href="/policies/refund-policy/">Exchange policy</a></p></details></div></div></section>
+      <section class="section wrap reviews" id="reviews" aria-labelledby="reviews-title" data-reviews="{text(product['handle'])}">
+        <div class="reviews__head"><h2 id="reviews-title">Reviews</h2><p class="reviews__summary" data-reviews-summary>Loading reviews…</p></div>
+        <div class="reviews__list" data-reviews-list></div>
+        <details class="reviews__write"><summary class="button button-outline">Write a review</summary>
+          <form class="review-form" action="/api/reviews" method="post" data-ajax-form>
+            <input type="hidden" name="handle" value="{text(product['handle'])}">
+            <fieldset class="star-input"><legend>Your rating</legend><div>{''.join(f'<label><input type="radio" name="rating" value="{n}" required><span aria-hidden="true">{icon("star")}</span><span class="visually-hidden">{n} star{"s" if n > 1 else ""}</span></label>' for n in range(5, 0, -1))}</div></fieldset>
+            <label>Your name<input name="name" autocomplete="given-name" required maxlength="60"></label>
+            <label>Your review<textarea name="body" rows="5" required minlength="10" maxlength="2000" placeholder="How did it fit, and how did you wear it?"></textarea></label>
+            <input class="form-trap" name="company" tabindex="-1" autocomplete="off" aria-hidden="true">
+            <button type="submit" class="button button-dark">Send review</button>
+            <p class="form-status" role="status" aria-live="polite"></p>
+            <p class="review-form__note">Reviews appear after they are checked. Your name is shown with your review.</p>
+          </form></details>
+      </section>
       <div class="buy-bar" data-buy-bar aria-hidden="true"><div class="buy-bar__info"><strong>{title}</strong><span data-buy-bar-price>{price(product)}</span></div><button type="button" class="button button-dark" data-buy-bar-add tabindex="-1">Add to bag</button></div>
       <section class="section wrap related-section"><div class="section-heading"><div><h2>You might also like</h2></div><a class="text-link" href="/collections/all/">Shop all {icon('arrow')}</a></div><div class="product-grid">{''.join(product_card(p,i) for i,p in enumerate([p for p in PRODUCTS if p['handle'] != product['handle']][:4]))}</div></section>
       <div class="tryon-layer" id="tryon-layer" hidden><div class="tryon-backdrop" data-tryon-close></div><section class="tryon-dialog" role="dialog" aria-modal="true" aria-labelledby="tryon-title" aria-describedby="tryon-description"><button type="button" class="icon-button tryon-close" data-tryon-close aria-label="Close virtual try-on">{icon('close')}</button><div class="tryon-copy"><h2 id="tryon-title">See it on <em>you.</em></h2><p id="tryon-description">Upload a clear, front-facing photo to preview the {title}. Your photo is sent to our try-on provider only when you choose Generate.</p><div class="tryon-source"><img src="{first_image(product)}" alt="{title}" data-tryon-garment><div><span>1. Your piece</span><strong>{title}</strong><small>Current product photo</small></div></div><label class="tryon-upload" for="tryon-person"><span>2. Your photo</span><strong data-tryon-file-label>Choose a photo</strong><small>JPG, PNG or WebP · front-facing · up to 15 MB</small></label><input id="tryon-person" class="tryon-file-input" data-tryon-file type="file" accept="image/jpeg,image/png,image/webp" aria-label="Choose your photo for virtual try-on"><p class="tryon-privacy">Your photo is used to create this preview and is not saved in this storefront. The provider may retain the generated image for up to one day. The preview is illustrative and does not determine size or fit. Daily previews are limited.</p><button type="button" class="button button-dark tryon-generate" data-tryon-generate disabled>Generate preview {icon('arrow')}</button><p class="tryon-status" data-tryon-status role="status" aria-live="polite"></p></div><div class="tryon-visual"><div class="tryon-result" data-tryon-result><div class="tryon-placeholder"><span>Virtual try-on</span><p>Your look appears here.</p></div></div><a class="button button-light tryon-download" data-tryon-download hidden download="ruchs-virtual-try-on.png">Download your look {icon('arrow')}</a></div></section></div>{live_modal}'''

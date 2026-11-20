@@ -34,6 +34,18 @@ The build (`scripts/build_worker.py`) adds a canonical URL, Open Graph and Twitt
 
 Pages are served with `cache-control: no-cache`. Scripts and styles are referenced with a content hash (`/remap.js?v=…`) and cached for a year, so each deploy is visible immediately.
 
+## Reviews and size guide
+
+Product pages have a Reviews section. Shoppers submit a star rating, name and review (`POST /api/reviews`, with the same origin check, hidden trap field and daily limit as the other forms). Every review is stored in the D1 table `reviews` as `pending` and appears only after you approve it; the average rating then shows under the product title. Moderate with:
+
+```bash
+npx wrangler d1 execute ruchs-tryon-quota --remote --command "SELECT id, handle, rating, name, body FROM reviews WHERE status = 'pending'"
+npx wrangler d1 execute ruchs-tryon-quota --remote --command "UPDATE reviews SET status = 'approved' WHERE id = 1"
+npx wrangler d1 execute ruchs-tryon-quota --remote --command "UPDATE reviews SET status = 'rejected' WHERE id = 2"
+```
+
+The size guide under the size picker (`SIZE_CHART` in `scripts/remap.py`) is a standard Indian women's body-measurement chart, labelled as a general guide. Replace the values with Ruchs's own measurements when available and rebuild.
+
 ## Newsletter and contact messages
 
 The footer newsletter (`POST /api/subscribe`) and the contact page form (`POST /api/contact`) store submissions in the D1 tables `subscribers` and `contact_messages`. Forms only accept requests from the site's own origin, silently drop submissions that fill a hidden trap field, and allow ten submissions per visitor per day. Read them with:

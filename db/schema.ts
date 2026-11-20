@@ -1,4 +1,4 @@
-import {integer, primaryKey, sqliteTable, text} from 'drizzle-orm/sqlite-core';
+import {index, integer, primaryKey, sqliteTable, text} from 'drizzle-orm/sqlite-core';
 
 export const tryonQuota = sqliteTable('tryon_quota', {
   day: text('day').notNull(),
@@ -24,3 +24,14 @@ export const contactMessages = sqliteTable('contact_messages', {
   message: text('message').notNull(),
   createdAt: text('created_at').notNull(),
 });
+
+// Product reviews from shoppers. Shown only after approval (status 'approved').
+export const reviews = sqliteTable('reviews', {
+  id: integer('id').primaryKey({autoIncrement: true}),
+  handle: text('handle').notNull(),
+  rating: integer('rating').notNull(),
+  name: text('name').notNull(),
+  body: text('body').notNull(),
+  status: text('status').notNull().default('pending'),
+  createdAt: text('created_at').notNull(),
+}, table => [index('reviews_handle_status').on(table.handle, table.status)]);

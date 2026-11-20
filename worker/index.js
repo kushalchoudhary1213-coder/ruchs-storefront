@@ -483,9 +483,53 @@ async function contact(request, env) {
   return json({ok: true, message: 'Thank you. The Ruchs team will reply by email during support hours (Monday to Friday, 11 AM – 7 PM IST).'});
 }
 
+// Product reviews: submitted reviews wait as 'pending' until approved in D1
+// (see README); only approved reviews are listed.
+async function submitReview(request, env) {
+  const {fields, error} = await acceptForm(request, env);
+  if (error) return error;
+  const handle = clean(fields.handle, 120);
+  const rating = Number(fields.rating);
+  const name = clean(fields.name, 60);
+  const body = String(fields.body ?? '').trim().slice(0, 2000);
+  if (!productImages[handle]) return json({error: 'Choose a valid product.'}, 400);
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) return json({error: 'Choose a rating from 1 to 5 stars.'}, 400);
+  if (!name) return json({error: 'Please add your name.'}, 400);
+  if (body.length < 10) return json({error: 'Please write at least a sentence about the piece.'}, 400);
+  try {
+    await env.DB.prepare('INSERT INTO reviews (handle, rating, name, body, status, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+      .bind(handle, rating, name, body, 'pending', new Date().toISOString()).run();
+  } catch (failure) {
+    console.error('Review failed', failure?.message || 'unknown');
+    return json({error: 'Could not send your review right now. Please try again.'}, 503);
+  }
+  return json({ok: true, message: 'Thank you. Your review will appear here once it has been checked.'});
+}
+
+async function listReviews(request, env) {
+  const handle = new URL(request.url).searchParams.get('handle') || '';
+  if (!productImages[handle]) return json({error: 'Choose a valid product.'}, 400);
+  if (!env.DB) return json({count: 0, average: null, reviews: []});
+  try {
+    const summary = await env.DB.prepare("SELECT COUNT(*) AS count, AVG(rating) AS average FROM reviews WHERE handle = ? AND status = 'approved'").bind(handle).first();
+    const {results} = await env.DB.prepare("SELECT name, rating, body, created_at FROM reviews WHERE handle = ? AND status = 'approved' ORDER BY created_at DESC LIMIT 50").bind(handle).all();
+    const count = Number(summary?.count || 0);
+    return new Response(JSON.stringify({
+      count,
+      average: count ? Math.round(Number(summary.average) * 10) / 10 : null,
+      reviews: results.map(review => ({name: review.name, rating: review.rating, body: review.body, date: review.created_at.slice(0, 10)})),
+    }), {headers: {'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=60'}});
+  } catch (failure) {
+    console.error('Reviews unavailable', failure?.message || 'unknown');
+    return json({count: 0, average: null, reviews: []});
+  }
+}
+
 export default {
   async fetch(request, env, context) {
     const path = new URL(request.url).pathname;
+    if (path === '/api/reviews' && request.method === 'POST') return submitReview(request, env);
+    if (path === '/api/reviews' && request.method === 'GET') return listReviews(request, env);
     if (path === '/api/subscribe' && request.method === 'POST') return subscribe(request, env);
     if (path === '/api/contact' && request.method === 'POST') return contact(request, env);
     if (path === '/api/checkout' && request.method === 'POST') return checkout(request, env);

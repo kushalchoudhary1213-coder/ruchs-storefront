@@ -369,6 +369,30 @@
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     }
   });
+  // Reviews: approved reviews only, with the average shown under the title.
+  const STAR = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9Z"/></svg>';
+  const stars = rating => `<span class="stars" role="img" aria-label="${rating} out of 5 stars">${[1, 2, 3, 4, 5].map(n => `<span class="${n <= Math.round(rating) ? 'is-on' : ''}">${STAR}</span>`).join('')}</span>`;
+  const reviewsSection = $('[data-reviews]');
+  if (reviewsSection) {
+    fetch(`/api/reviews?handle=${encodeURIComponent(reviewsSection.dataset.reviews)}`)
+      .then(response => response.ok ? response.json() : {count: 0, reviews: []})
+      .catch(() => ({count: 0, reviews: []}))
+      .then(data => {
+        const summary = $('[data-reviews-summary]');
+        const list = $('[data-reviews-list]');
+        if (!data.count) {
+          summary.textContent = 'No reviews yet. Bought this piece? Tell others how it fits.';
+          list.innerHTML = '';
+          return;
+        }
+        const label = `${data.count} review${data.count === 1 ? '' : 's'}`;
+        summary.innerHTML = `${stars(data.average)} <strong>${data.average.toFixed(1)}</strong> from ${label}`;
+        list.innerHTML = data.reviews.map(review => `<article class="review"><header>${stars(review.rating)}<strong>${escapeHTML(review.name)}</strong><time datetime="${escapeHTML(review.date)}">${new Intl.DateTimeFormat('en-IN', {day: 'numeric', month: 'short', year: 'numeric'}).format(new Date(review.date))}</time></header><p>${escapeHTML(review.body)}</p></article>`).join('');
+        const top = $('[data-rating-summary]');
+        if (top) { top.innerHTML = `${stars(data.average)} <span>${data.average.toFixed(1)} from ${label}</span>`; top.hidden = false; }
+      });
+  }
+
   // Phone buy bar: shown while the page's own Add to bag row is off screen.
   const buyBar = $('[data-buy-bar]');
   const buyRow = $('.buy-row');

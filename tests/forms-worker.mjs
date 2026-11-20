@@ -82,3 +82,26 @@ assert.match(missingHtml, /We couldn’t find that page/);
 assert.match(missingHtml, /href="\/collections\/all\/"/);
 assert.doesNotMatch(await (await worker.fetch(new Request(`${origin}/sitemap.xml`), {}, {})).text(), /\/404\//);
 console.log('Branded 404 page passed');
+
+// Reviews: submitted as pending, listed only once approved, validated.
+const reviewDb = createLocalDb();
+const reviewEnv = {DB: reviewDb};
+const postReview = (body, ip = '192.0.2.10') => worker.fetch(new Request(`${origin}/api/reviews`, {
+  method: 'POST', headers: {'content-type': 'application/json', origin, 'cf-connecting-ip': ip}, body: JSON.stringify(body),
+}), reviewEnv, {});
+const listReviews = handle => worker.fetch(new Request(`${origin}/api/reviews?handle=${handle}`), reviewEnv, {}).then(r => r.json());
+response = await postReview({handle: 'aria-dusk-dress', rating: 5, name: 'Meera', body: 'Fits true to size and the fabric is lovely.'});
+assert.equal(response.status, 200);
+assert.deepEqual(await listReviews('aria-dusk-dress'), {count: 0, average: null, reviews: []});
+await reviewDb.prepare("UPDATE reviews SET status = 'approved' WHERE name = 'Meera'").run();
+await postReview({handle: 'aria-dusk-dress', rating: 4, name: 'Riya', body: 'Lovely colour, a little long on me.'}, '192.0.2.11');
+await reviewDb.prepare("UPDATE reviews SET status = 'approved' WHERE name = 'Riya'").run();
+const listed = await listReviews('aria-dusk-dress');
+assert.equal(listed.count, 2);
+assert.equal(listed.average, 4.5);
+assert.deepEqual(listed.reviews.map(r => r.name).sort(), ['Meera', 'Riya']);
+assert.equal((await postReview({handle: 'not-a-product', rating: 5, name: 'A', body: 'Long enough review text'})).status, 400);
+assert.equal((await postReview({handle: 'aria-dusk-dress', rating: 6, name: 'A', body: 'Long enough review text'})).status, 400);
+assert.equal((await postReview({handle: 'aria-dusk-dress', rating: 3, name: 'A', body: 'Short'})).status, 400);
+assert.equal((await worker.fetch(new Request(`${origin}/api/reviews?handle=nope`), reviewEnv, {})).status, 400);
+console.log('Reviews: pending until approved, average, validation passed');
