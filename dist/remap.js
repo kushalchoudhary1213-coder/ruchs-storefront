@@ -29,11 +29,93 @@
       event.viewTransition.finished.finally(() => photo.style.removeProperty('view-transition-name'));
     });
   }
+  const cartNote = 'Taxes included. Offers, shipping and payment are completed on the secure Ruchs checkout.';
   let productsPromise;
   let previousFocus;
 
+  // Live Shopify stock and prices replace the build-time snapshot when the
+  // Worker has a Storefront API token. Without one, the snapshot is used.
+  function liveInventory() {
+    return fetch('/api/inventory').then(response => response.ok ? response.json() : {live: false, variants: {}}).catch(() => ({live: false, variants: {}}));
+  }
   function products() {
-    return productsPromise ||= fetch('/products.json').then(response => response.json()).then(data => data.products);
+    return productsPromise ||= Promise.all([
+      fetch('/products.json').then(response => response.json()),
+      liveInventory(),
+    ]).then(([data, stock]) => {
+      if (!stock.live) return data.products;
+      for (const product of data.products) {
+        for (const variant of product.variants) {
+          const live = stock.variants[String(variant.id)];
+          if (live) Object.assign(variant, {available: live.available, price: live.price, compare_at_price: live.compareAtPrice});
+          else variant.available = false;
+        }
+      }
+      return data.products;
+    });
+  }
+  async function refreshCartPrices() {
+    const items = cart();
+    if (!items.length) return;
+    const variants = new Map((await products()).flatMap(product => product.variants.map(variant => [variant.id, variant])));
+    let changed = false;
+    for (const item of items) {
+      const variant = variants.get(item.id);
+      if (variant && Number(variant.price) !== item.price) { item.price = Number(variant.price); changed = true; }
+    }
+    if (changed) { write(CART_KEY, items); if (!$('#cart-layer').hidden) renderCart(); }
+  }
+  // Shiprocket's checkout script (the one ruchs.in uses) loads only when a
+  // shopper chooses Buy now, so it never slows down browsing.
+  let shiprocketReady;
+  function loadShiprocket() {
+    return shiprocketReady ||= new Promise((resolve, reject) => {
+      if (window.HeadlessCheckout) return resolve();
+      const styles = document.createElement('link');
+      styles.rel = 'stylesheet';
+      styles.href = 'https://fastrr-boost-ui.pickrr.com/assets/styles/sr-checkout.css';
+      document.head.appendChild(styles);
+      const script = document.createElement('script');
+      script.src = 'https://fastrr-boost-ui.pickrr.com/assets/js/channels/shopify.js';
+      script.async = true;
+      script.onload = () => window.HeadlessCheckout ? resolve() : reject(new Error('shiprocket-missing'));
+      script.onerror = () => reject(new Error('shiprocket-unavailable'));
+      document.head.appendChild(script);
+    }).catch(error => { shiprocketReady = null; throw error; });
+  }
+  async function startCheckout(button, event) {
+    const note = $('.cart-note');
+    const items = cart();
+    if (!items.length) return;
+    const provider = button.dataset.checkout === 'shiprocket' ? 'shiprocket' : 'shopify';
+    const buttons = $$('[data-checkout]');
+    buttons.forEach(node => { node.disabled = true; });
+    note.setAttribute('role', 'status');
+    note.textContent = 'Opening secure checkout…';
+    try {
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({provider, lines: items.map(item => ({id: item.id, quantity: item.quantity}))}),
+      });
+      const data = await response.json();
+      if (!response.ok || !(data.url || data.token)) throw new Error(data.error || 'Checkout is unavailable right now. Please try again.');
+      if (data.token) {
+        try {
+          await loadShiprocket();
+          window.HeadlessCheckout.addToCart(event, data.token, {fallbackUrl: data.fallbackUrl});
+          note.textContent = cartNote;
+          buttons.forEach(node => { node.disabled = false; });
+        } catch {
+          location.href = data.fallbackUrl;
+        }
+        return;
+      }
+      location.href = data.url;
+    } catch (error) {
+      note.textContent = error.message || 'Checkout is unavailable right now. Please try again.';
+      buttons.forEach(node => { node.disabled = false; });
+    }
   }
 
   function cart() { return read(CART_KEY, []); }
@@ -76,7 +158,7 @@
     }
     lines.innerHTML = items.map(item => `<article class="cart-line"><a href="/products/${escapeHTML(item.handle)}/"><img src="${escapeHTML(item.image)}" alt="${escapeHTML(item.title)}"></a><div><h3><a href="/products/${escapeHTML(item.handle)}/">${escapeHTML(item.title)}</a></h3><p>${escapeHTML(item.variant)}</p><strong>${money(item.price)}</strong><div class="cart-line__qty"><button type="button" data-cart-minus="${item.id}" aria-label="Decrease ${escapeHTML(item.title)} quantity">−</button><span>${item.quantity}</span><button type="button" data-cart-plus="${item.id}" aria-label="Increase ${escapeHTML(item.title)} quantity">+</button><button type="button" class="cart-remove" data-cart-remove="${item.id}">Remove</button></div></div></article>`).join('');
     const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    foot.innerHTML = `<div class="cart-subtotal"><span>Subtotal</span><strong>${money(subtotal)}</strong></div><button type="button" class="button button-dark" data-checkout>Checkout on Ruchs</button><p class="cart-note">Checkout requires the original Ruchs store. This preview keeps your bag on this device.</p>`;
+    foot.innerHTML = `<div class="cart-subtotal"><span>Subtotal</span><strong>${money(subtotal)}</strong></div><div class="cart-checkout"><button type="button" class="button button-dark" data-checkout="shiprocket">Buy now <small>Shiprocket · UPI, cards &amp; COD</small></button><button type="button" class="button button-outline" data-checkout="shopify">Shopify checkout <small>Razorpay · UPI &amp; cards</small></button></div><p class="cart-note">${cartNote}</p>`;
   }
 
   function toggleWishlist(handle) {
@@ -188,9 +270,8 @@
       if (line) line.quantity = change.dataset.cartRemove ? 0 : line.quantity + (change.dataset.cartPlus ? 1 : -1);
       write(CART_KEY, items.filter(item => item.quantity > 0)); renderCart();
     }
-    if (target.closest('[data-checkout]')) {
-      const note = $('.cart-note'); note.textContent = 'Checkout needs the live Shopify store. This preview does not place orders.'; note.setAttribute('role','status');
-    }
+    const checkoutButton = target.closest('[data-checkout]');
+    if (checkoutButton && !checkoutButton.disabled) startCheckout(checkoutButton, event);
   });
   document.addEventListener('change', event => {
     if (event.target.matches('.variant-choice input')) updateVariant();
@@ -199,5 +280,5 @@
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape') { if (!$('#cart-layer').hidden) closeCart(); closeMenu(); $('#search-panel').hidden = true; }
   });
-  updateCartCount(); syncWishlist(); updateVariant(); renderWishlist(); filterSearch();
+  updateCartCount(); syncWishlist(); updateVariant(); renderWishlist(); filterSearch(); refreshCartPrices();
 })();

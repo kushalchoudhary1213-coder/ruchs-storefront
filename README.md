@@ -20,7 +20,18 @@ The photo try-on panel uses the currently selected Ruchs product photo as a worn
 
 The live panel uses Decart Lucy VTON 3.6 to transform the shopper's camera stream. The Worker uses `DECART_API_KEY` to mint a short-lived token restricted to this site's origin, one model, and a 30-second maximum session. The browser receives only that client token. Live sessions are limited to two per visitor and five across the site per UTC day; failed token requests are refunded. Camera tracks and the Decart connection stop when the panel closes, the timer expires, the page is hidden, or the camera disconnects. Decart charges per second of active generation. The Ruchs catalog uses model photos rather than isolated garment shots, so live garment fidelity may vary.
 
-The product pages, collections, search, wishlist, and informational routes are local. Cart and wishlist changes are saved in the browser. Shopify account, checkout, payments, and live inventory require the original store backend.
+The product pages, collections, search, wishlist, and informational routes are local. Cart and wishlist changes are saved in the browser.
+
+## Shopify and Shiprocket checkout
+
+The Ruchs Shopify store (`frkcn3-hp.myshopify.com`, www.ruchs.in) is the commerce backend. Its Headless sales channel provides a Storefront API private token, stored as the Worker secret `SHOPIFY_STOREFRONT_TOKEN`. With it, `GET /api/inventory` serves live stock and prices for the catalog variants (cached for 60 seconds), and product pages and the bag use them in place of the build-time snapshot.
+
+The bag offers two checkouts through `POST /api/checkout`. Both accept only known catalog variants, at most 10 of each and 20 lines, from the storefront's own origin.
+
+- **Buy now** (`provider: "shiprocket"`) uses the store's Shiprocket (Fastrr) checkout. Without Shiprocket keys it fills the www.ruchs.in cart with the bag and opens that cart page, where the Shiprocket BUY NOW button completes the order. With `SHIPROCKET_CHECKOUT_API_KEY` and `SHIPROCKET_CHECKOUT_SECRET` set as Worker secrets, the Worker signs a Shiprocket headless checkout token and the Shiprocket popup opens on this site, falling back to the cart page if Shiprocket refuses it.
+- **Shopify checkout** (`provider: "shopify"`) creates a cart through the Storefront API and opens Shopify checkout, where Razorpay takes payment. If the Storefront API is unavailable, a Shopify cart permalink opens the same checkout.
+
+Orders, payments, refunds, and fulfilment are handled in Shopify admin and Shiprocket. The Worker never receives payment details.
 
 ## Cloudflare hosting
 

@@ -22,9 +22,15 @@ product_images = {
     for product in products
 }
 
+shopify_variants = {
+    str(variant["id"]): {"handle": product["handle"], "price": variant["price"]}
+    for product in products
+    for variant in product["variants"]
+}
+
 prefix = "\n".join(
     f"const {name} = {json.dumps(value, ensure_ascii=False, separators=(',', ':'))};"
-    for name, value in (("pages", pages), ("siteAssets", assets), ("productImages", product_images))
+    for name, value in (("pages", pages), ("siteAssets", assets), ("productImages", product_images), ("shopifyVariants", shopify_variants))
 )
 worker = (root / "worker" / "index.js").read_text(encoding="utf-8")
 output = dist / "server" / "index.js"

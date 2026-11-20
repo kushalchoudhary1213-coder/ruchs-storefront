@@ -9,6 +9,16 @@ const liveSessionSeconds = 30;
 const liveDailyLimit = 5;
 const liveVisitorLimit = 2;
 
+// Shopify backend for ruchs.in. Checkout always works through Shopify cart
+// permalinks; with SHOPIFY_STOREFRONT_TOKEN set, carts are created through the
+// Storefront API and live stock and prices are served from /api/inventory.
+const shopifyStoreDomain = 'frkcn3-hp.myshopify.com';
+const shopifyStorefrontDomain = 'www.ruchs.in';
+const shopifyDefaultApiVersion = '2026-04';
+const maxCartLines = 20;
+const maxLineQuantity = 10;
+const inventoryCacheSeconds = 60;
+
 function json(value, status = 200) {
   return new Response(JSON.stringify(value), {
     status,
@@ -280,9 +290,171 @@ async function tryOn(request, env) {
   }
 }
 
+function cartLines(value) {
+  if (!Array.isArray(value?.lines) || !value.lines.length || value.lines.length > maxCartLines) return null;
+  const merged = new Map();
+  for (const line of value.lines) {
+    const id = String(line?.id ?? '');
+    const quantity = Number(line?.quantity);
+    if (!/^\d+$/.test(id) || !shopifyVariants[id] || !Number.isInteger(quantity) || quantity < 1) return null;
+    merged.set(id, Math.min(maxLineQuantity, (merged.get(id) || 0) + quantity));
+  }
+  return [...merged].map(([id, quantity]) => ({id, quantity}));
+}
+
+// A Shopify cart permalink opens Shopify checkout with the bag's items (backup
+// for the Storefront API). With toCartPage it opens the ruchs.in cart page
+// instead, where the store's Shiprocket (Fastrr) BUY NOW checkout runs.
+function cartPermalink(lines, toCartPage = false) {
+  const items = lines.map(line => `${line.id}:${line.quantity}`).join(',');
+  return `https://${shopifyStorefrontDomain}/cart/${items}?${toCartPage ? 'storefront=true&' : ''}ref=myruchs`;
+}
+
+// Shiprocket (Fastrr) checkout on myruchs.com itself: with the store's
+// Shiprocket Checkout API key and secret, the Worker signs the cart and the
+// browser opens the same checkout popup as ruchs.in (HeadlessCheckout.addToCart).
+// Without the keys, shoppers reach it through the ruchs.in cart page.
+const shiprocketCheckoutApi = 'https://checkout-api.shiprocket.com/api/v1/access-token/checkout';
+
+async function hmacBase64(secret, message) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), {name: 'HMAC', hash: 'SHA-256'}, false, ['sign']);
+  const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(message));
+  return btoa(String.fromCharCode(...new Uint8Array(signature)));
+}
+
+async function shiprocketCheckout(lines, origin, env) {
+  const fallbackUrl = cartPermalink(lines, true);
+  if (!env.SHIPROCKET_CHECKOUT_API_KEY || !env.SHIPROCKET_CHECKOUT_SECRET) return json({url: fallbackUrl, mode: 'shiprocket-cart'});
+  try {
+    const body = JSON.stringify({
+      cart_data: {items: lines.map(line => ({variant_id: line.id, quantity: line.quantity}))},
+      redirect_url: `${origin}/?checkout=complete`,
+      timestamp: new Date().toISOString(),
+    });
+    const response = await timedFetch(shiprocketCheckoutApi, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'X-Api-Key': env.SHIPROCKET_CHECKOUT_API_KEY,
+        'X-Api-HMAC-SHA256': await hmacBase64(env.SHIPROCKET_CHECKOUT_SECRET, body),
+      },
+      body,
+    }, 15000);
+    if (!response.ok) throw new Error(`shiprocket-status-${response.status}`);
+    const data = await response.json();
+    const token = data?.result?.token ?? data?.token;
+    if (typeof token !== 'string' || !token) throw new Error('shiprocket-missing-token');
+    return json({token, fallbackUrl, mode: 'shiprocket'});
+  } catch (error) {
+    console.error('Shiprocket checkout token unavailable', error?.message || 'unknown');
+    return json({url: fallbackUrl, mode: 'shiprocket-cart'});
+  }
+}
+
+async function storefrontQuery(request, env, query, variables) {
+  const version = env.SHOPIFY_API_VERSION || shopifyDefaultApiVersion;
+  const headers = {
+    'content-type': 'application/json',
+    'Shopify-Storefront-Private-Token': env.SHOPIFY_STOREFRONT_TOKEN,
+  };
+  const buyerIp = request.headers.get('cf-connecting-ip');
+  if (buyerIp) headers['Shopify-Storefront-Buyer-IP'] = buyerIp;
+  const response = await timedFetch(`https://${shopifyStoreDomain}/api/${version}/graphql.json`, {
+    method: 'POST', headers, body: JSON.stringify({query, variables}),
+  }, 15000);
+  if (!response.ok) throw new Error(`storefront-status-${response.status}`);
+  const body = await response.json();
+  if (body.errors?.length) throw new Error('storefront-graphql-error');
+  return body.data;
+}
+
+const cartCreateMutation = `mutation CartCreate($lines: [CartLineInput!]!) {
+  cartCreate(input: {lines: $lines, attributes: [{key: "source", value: "myruchs.com"}]}) {
+    cart { checkoutUrl }
+    userErrors { field message }
+  }
+}`;
+
+async function checkout(request, env) {
+  const origin = new URL(request.url).origin;
+  if (request.headers.get('origin') !== origin) return json({error: 'This request must come from the storefront.'}, 403);
+  let fields;
+  try { fields = await request.json(); }
+  catch { return json({error: 'Your bag could not be read.'}, 400); }
+  const lines = cartLines(fields);
+  if (!lines) return json({error: 'Your bag has an item that is no longer available. Please remove it and try again.'}, 400);
+  if (fields.provider === 'shiprocket') return shiprocketCheckout(lines, origin, env);
+
+  if (env.SHOPIFY_STOREFRONT_TOKEN) {
+    try {
+      const data = await storefrontQuery(request, env, cartCreateMutation, {
+        lines: lines.map(line => ({merchandiseId: `gid://shopify/ProductVariant/${line.id}`, quantity: line.quantity})),
+      });
+      const result = data?.cartCreate;
+      if (result?.userErrors?.length) {
+        return json({error: result.userErrors[0].message || 'Some items in your bag are unavailable.'}, 409);
+      }
+      const url = result?.cart?.checkoutUrl;
+      if (typeof url === 'string' && url.startsWith('https://')) return json({url, mode: 'storefront'});
+      throw new Error('missing-checkout-url');
+    } catch (error) {
+      console.error('Shopify cart unavailable, using permalink', error?.message || 'unknown');
+    }
+  }
+  return json({url: cartPermalink(lines), mode: 'permalink'});
+}
+
+const inventoryQuery = `query Inventory($cursor: String) {
+  products(first: 100, after: $cursor) {
+    pageInfo { hasNextPage endCursor }
+    nodes { handle variants(first: 100) { nodes { id availableForSale price { amount } compareAtPrice { amount } } } }
+  }
+}`;
+
+async function inventory(request, env, context) {
+  if (!env.SHOPIFY_STOREFRONT_TOKEN) return json({live: false, variants: {}});
+  const cache = globalThis.caches?.default;
+  const cacheKey = new Request(new URL('/api/inventory', request.url).href);
+  const cached = await cache?.match(cacheKey);
+  if (cached) return cached;
+  try {
+    const variants = {};
+    let cursor = null;
+    for (let page = 0; page < 5; page++) {
+      const data = await storefrontQuery(request, env, inventoryQuery, {cursor});
+      for (const product of data.products.nodes) {
+        for (const variant of product.variants.nodes) {
+          const id = variant.id.split('/').pop();
+          if (!shopifyVariants[id]) continue;
+          variants[id] = {
+            available: !!variant.availableForSale,
+            price: variant.price.amount,
+            compareAtPrice: variant.compareAtPrice?.amount ?? null,
+          };
+        }
+      }
+      if (!data.products.pageInfo.hasNextPage) break;
+      cursor = data.products.pageInfo.endCursor;
+    }
+    const response = new Response(JSON.stringify({live: true, variants}), {
+      headers: {'content-type': 'application/json; charset=utf-8', 'cache-control': `public, max-age=${inventoryCacheSeconds}`},
+    });
+    if (cache) {
+      const write = cache.put(cacheKey, response.clone());
+      if (context?.waitUntil) context.waitUntil(write); else await write;
+    }
+    return response;
+  } catch (error) {
+    console.error('Shopify inventory unavailable', error?.message || 'unknown');
+    return json({live: false, variants: {}});
+  }
+}
+
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, context) {
     const path = new URL(request.url).pathname;
+    if (path === '/api/checkout' && request.method === 'POST') return checkout(request, env);
+    if (path === '/api/inventory' && request.method === 'GET') return inventory(request, env, context);
     if (path === '/api/live/status' && request.method === 'GET') return liveStatus(request, env);
     if (path === '/api/live/garment' && request.method === 'GET') return liveGarment(request);
     if (path === '/api/live/token' && request.method === 'POST') return createLiveToken(request, env);
