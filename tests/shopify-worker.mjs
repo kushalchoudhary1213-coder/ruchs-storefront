@@ -40,10 +40,10 @@ assert.equal((await response.json()).error, 'This item is sold out.');
 // If the Storefront API fails, or no token is set, a Shopify cart permalink is used.
 shopify = {status: 500, body: {}};
 data = await (await checkout([{id: variant, quantity: 1}], env)).json();
-assert.deepEqual(data, {url: `https://www.ruchs.in/cart/${variant}:1?ref=myruchs`, mode: 'permalink'});
+assert.deepEqual(data, {url: `https://checkout.myruchs.com/cart/${variant}:1?ref=myruchs`, mode: 'permalink'});
 calls.length = 0;
 data = await (await checkout([{id: variant, quantity: 50}])).json();
-assert.deepEqual(data, {url: `https://www.ruchs.in/cart/${variant}:10?ref=myruchs`, mode: 'permalink'});
+assert.deepEqual(data, {url: `https://checkout.myruchs.com/cart/${variant}:10?ref=myruchs`, mode: 'permalink'});
 assert.equal(calls.length, 0);
 
 // A stale page still sending provider "shiprocket" gets the Shopify checkout.
@@ -73,3 +73,17 @@ data = await (await worker.fetch(new Request(`${origin}/api/inventory`), env, {}
 assert.deepEqual(data, {live: true, variants: {[variant]: {available: false, price: '5499.0', compareAtPrice: '5799.0'}}});
 
 console.log('Shopify Worker: Storefront checkout, sold-out errors, permalink fallback, validation and live inventory passed');
+
+// Legacy ruchs.in paths redirect to their myruchs.com equivalents.
+const get = path => worker.fetch(new Request(`${origin}${path}`), {}, {});
+for (const [from, to] of [['/cart', '/'], ['/cart/', '/'], ['/products', '/collections/all/'], ['/blogs', '/blogs/news/']]) {
+  const redirect = await get(from);
+  assert.equal(redirect.status, 301, from);
+  assert.equal(redirect.headers.get('location'), `${origin}${to}`, from);
+}
+for (const path of ['/account', '/account/login', '/account/orders/123']) {
+  assert.equal((await get(path)).headers.get('location'), 'https://shopify.com/93998121332/account', path);
+}
+assert.equal((await get('/cdn/shop/files/a.png')).headers.get('location'), 'https://checkout.myruchs.com/cdn/shop/files/a.png');
+assert.equal((await get('/products/aria-dusk-dress/')).status, 200);
+console.log('Legacy redirects: cart, products, blogs, account and cdn passed');

@@ -28,6 +28,12 @@ The Ruchs Shopify store (`frkcn3-hp.myshopify.com`, www.ruchs.in) is the commerc
 
 The bag's Checkout button calls `POST /api/checkout`, which accepts only known catalog variants, at most 10 of each and 20 lines, from the storefront's own origin. It creates a cart through the Storefront API and opens Shopify checkout. If the Storefront API is unavailable, a Shopify cart permalink opens the same checkout. Shopify reports sold-out items back to the bag.
 
+## Domains
+
+myruchs.com is the only shop front. In Shopify, `checkout.myruchs.com` is the primary domain (Cloudflare DNS: CNAME `checkout` to `shops.myshopify.com`, DNS only), so checkout, order status pages and Shopify CDN files use it. www.ruchs.in and ruchs.in redirect to it, and the published Shopify theme is the redirect theme in `shopify-theme/` (from [Shopify/hydrogen-redirect-theme](https://github.com/Shopify/hydrogen-redirect-theme), adjusted for the current Liquid checker), which sends every store page to the same path on myruchs.com. Customer accounts stay at `shopify.com/93998121332/account`. The Worker redirects old ruchs.in paths that have no myruchs.com page (`/cart`, `/products`, `/blogs`, `/account`).
+
+Update the redirect theme with `npx @shopify/cli@3 theme push --store frkcn3-hp.myshopify.com --path shopify-theme --theme 196606296436`. To undo the move, make www.ruchs.in the primary domain again in Shopify (Settings → Domains), republish the previous theme "FV3<>Copy of Updated copy of Dwell[27-aug]" (ID 192731316596), and set `shopifyStorefrontDomain` in `worker/index.js` back to `www.ruchs.in`.
+
 Payment methods come from Shopify's payment settings: Razorpay for UPI, cards, NetBanking and wallets, and Shopify's manual Cash on Delivery method. Orders, payments, refunds, and fulfilment are handled in Shopify admin. The Worker never receives payment details.
 
 ## Cloudflare hosting

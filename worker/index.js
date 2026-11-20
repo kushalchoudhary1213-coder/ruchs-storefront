@@ -13,7 +13,12 @@ const liveVisitorLimit = 2;
 // permalinks; with SHOPIFY_STOREFRONT_TOKEN set, carts are created through the
 // Storefront API and live stock and prices are served from /api/inventory.
 const shopifyStoreDomain = 'frkcn3-hp.myshopify.com';
-const shopifyStorefrontDomain = 'www.ruchs.in';
+// Shopify's primary domain. It serves checkout, order status and Shopify CDN
+// files; its theme redirects every store page back to myruchs.com.
+const shopifyStorefrontDomain = 'checkout.myruchs.com';
+const shopifyCustomerAccountUrl = 'https://shopify.com/93998121332/account';
+// Old ruchs.in paths that have no page of their own on myruchs.com.
+const legacyRedirects = {'/cart': '/', '/products': '/collections/all/', '/blogs': '/blogs/news/'};
 const shopifyDefaultApiVersion = '2026-04';
 const maxCartLines = 20;
 const maxLineQuantity = 10;
@@ -430,8 +435,11 @@ export default {
     if (path === '/api/try-on' && request.method === 'POST') return tryOn(request, env);
     if (request.method !== 'GET' && request.method !== 'HEAD') return new Response('Method not allowed', {status: 405});
     if (path.startsWith('/cdn/')) {
-      return Response.redirect(`https://www.ruchs.in${path}`, 302);
+      return Response.redirect(`https://${shopifyStorefrontDomain}${path}`, 302);
     }
+    if (path === '/account' || path.startsWith('/account/')) return Response.redirect(shopifyCustomerAccountUrl, 302);
+    const legacy = legacyRedirects[path.replace(/\/$/, '')];
+    if (legacy) return Response.redirect(new URL(legacy, request.url).href, 301);
     const key = path === '/' ? '/' : path.replace(/\/$/, '') + '/';
     const html = pages[key];
     if (html) return new Response(request.method === 'HEAD' ? null : html, {headers: {'content-type': 'text/html; charset=utf-8'}});
