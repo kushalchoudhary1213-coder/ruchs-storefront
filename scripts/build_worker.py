@@ -15,7 +15,7 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[1]
 dist = root / "dist"
 SITE = "https://myruchs.com"
-DEFAULT_SHARE_IMAGE = "/showcase/aria-look.webp"
+DEFAULT_SHARE_IMAGE = "/showcase/brand-share.jpg"
 # Tracking IDs carried over from the ruchs.in theme (Google & YouTube and Meta apps).
 GA_MEASUREMENT_ID = "G-M0EHDZSDPJ"
 META_PIXEL_ID = "1412294113670313"

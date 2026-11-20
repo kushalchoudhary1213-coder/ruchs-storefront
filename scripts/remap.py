@@ -82,7 +82,7 @@ def header() -> str:
     <header class="site-header"><div class="header-inner">
       <button type="button" class="icon-button mobile-menu-button" data-menu-open aria-label="Open menu" aria-expanded="false">{icon('menu')}</button>
       <nav class="primary-nav" aria-label="Primary"><a href="/collections/all/">Shop</a><a href="/#lookbook">Lookbook</a><a href="/#wardrobe">Selected pieces</a></nav>
-      <a class="brand" href="/" aria-label="Ruchs home"><span>RUCHS</span><small>BY RUCHI SACHDEVA</small></a>
+      <a class="brand brand--logo" href="/" aria-label="Ruchs home"><img class="brand-monogram" src="/showcase/brand-monogram.webp" alt="" width="34" height="40"><img class="brand-wordmark" src="/showcase/brand-wordmark.webp" alt="Ruchs" width="101" height="24"></a>
       <div class="header-actions"><button type="button" class="icon-button" data-search-open aria-label="Search">{icon('search')}</button>
         <a class="icon-button" href="/account" aria-label="Your account">{icon('user')}</a>
         <a class="icon-button" href="/pages/swym-wishlist/" aria-label="Wishlist">{icon('heart')}</a>
@@ -95,7 +95,7 @@ def header() -> str:
 
 def footer() -> str:
     collection_links = ''.join(f'<a href="/collections/{slug}/">{label}</a>' for slug, label in COLLECTIONS[:6])
-    return f'''<footer class="site-footer"><div class="footer-main wrap"><div class="footer-brand"><a class="brand" href="/"><span>RUCHS</span><small>BY RUCHI SACHDEVA</small></a><p>Womenswear by Ruchi Sachdeva.</p></div>
+    return f'''<footer class="site-footer"><div class="footer-main wrap"><div class="footer-brand"><a class="brand brand--footer" href="/" aria-label="Ruchs home"><img src="/showcase/brand-logo.webp" alt="Ruchs" width="186" height="120" loading="lazy"><small>BY RUCHI SACHDEVA</small></a><p>Womenswear by Ruchi Sachdeva.</p></div>
       <div class="footer-links"><h2>Explore</h2><a href="/collections/all/">Shop all</a>{collection_links}</div>
       <div class="footer-links"><h2>About</h2><a href="/pages/about-us/">Our story</a><a href="/pages/contact/">Contact</a><a href="/policies/shipping-policy/">Shipping</a><a href="/policies/refund-policy/">Returns & exchanges</a><a href="/policies/privacy-policy/">Privacy</a></div>
       <div class="footer-connect"><h2>Join the Ruchs list</h2><p>New pieces, restocks and private previews, by email.</p>
@@ -118,9 +118,9 @@ def page(title: str, body: str, description: str = "Thoughtfully crafted sustain
     css = "".join(f'<link rel="stylesheet" href="{url}">' for url in styles)
     js = "".join(f'<script defer src="{url}"></script>' for url in scripts)
     return f'''<!doctype html><html lang="en" data-type="{kind}"><head>
-    <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f6f1e7">
+    <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#4b1539">
     <meta name="description" content="{text(description)}"><title>{text(title)} — Ruchs</title>
-    <link rel="icon" href="/showcase/ruchs-icon.png" type="image/png">
+    <link rel="icon" href="/showcase/favicon-32.png" sizes="32x32" type="image/png"><link rel="icon" href="/showcase/ruchs-icon.png" sizes="512x512" type="image/png"><link rel="apple-touch-icon" href="/showcase/apple-touch-icon.png">
     {css}{js}{home_resources}</head><body>{header()}<main id="main">{body}</main>{footer()}</body></html>'''
 
 

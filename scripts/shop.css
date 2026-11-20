@@ -11,12 +11,12 @@
   src: url('./montserrat-normal.woff2') format('woff2');
 }
 :root {
-  --ivory: #f6f1e7; --paper: #fffcf5; --ink: #241e1c; --plum: #481b2c;
-  --rose-light: #eee5dd; --muted: #635c54; --line: #d0c8bc;
+  --ivory: #fffff0; --paper: #fffdf5; --ink: #2a1420; --plum: #4b1539;
+  --rose-light: #f9eee9; --muted: #6c5560; --line: #e2cbc1;
   --mast-height: 72px;
 }
 html { scroll-padding-top: var(--mast-height); }
-.site-header { background: #f6f1e7; border-color: #d4ccc0; backdrop-filter: none; }
+.site-header { background: #fffff0; border-color: #e2cbc1; backdrop-filter: none; }
 .site-header .header-inner { height: var(--mast-height); }
 .site-header .brand { color: var(--ink); }
 .brand span { letter-spacing: .07em; font-size: 39px; }
@@ -24,11 +24,11 @@ html { scroll-padding-top: var(--mast-height); }
 .primary-nav { gap: clamp(16px,2.25vw,40px); }
 .primary-nav a, .collection-back { font: 500 12px var(--body); }
 .search-panel { top: var(--mast-height); }
-.site-footer { color: #f6f1e7; background: #35202a; padding-top: clamp(48px,7vw,100px); }
+.site-footer { color: #fffff0; background: #4b1539; padding-top: clamp(48px,7vw,100px); }
 .site-footer .footer-brand .brand { color: inherit; }
 .site-footer .brand span { font-size: clamp(64px,8vw,124px); line-height: .9; letter-spacing: -.025em; }
 .site-footer .brand small { font-size: 8px; margin: 10px 0 0 .5em; }
-.footer-bottom { border-color: #6b545d; align-items: baseline; justify-content: space-between; }
+.footer-bottom { border-color: #6c5560; align-items: baseline; justify-content: space-between; }
 .footer-bottom a:hover, .collection-back:hover { text-decoration: underline; }
 .listing-intro { padding-block: clamp(45px,7vw,95px) 18px; }
 .listing-intro h1, .page-intro h1 { font-size: clamp(58px,8vw,120px); line-height: .95; }
@@ -39,7 +39,7 @@ html { scroll-padding-top: var(--mast-height); }
 .listing-toolbar { border-color: var(--line); }
 .product-grid { row-gap: clamp(24px,4vw,64px); }
 .product-card__meta h3 { font-weight: 500; }
-.product-card__image { background: #e8e1d6; }
+.product-card__image { background: #f1e3dc; }
 .product-card__alternate { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
 .product-card__view { z-index: 1; }
 @media (hover:hover) and (prefers-reduced-motion:no-preference) {
@@ -64,7 +64,7 @@ html { scroll-padding-top: var(--mast-height); }
   .product-detail { grid-template-columns: minmax(0,1.34fr) minmax(330px,.82fr); gap: clamp(36px,5vw,92px); }
   .product-gallery { display: grid; grid-template-columns: 58px minmax(0,1fr); align-items: start; gap: 12px; }
   .product-gallery__main { grid-column: 2; grid-row: 1; }
-  .product-gallery__main img { height: clamp(490px,calc(100svh - 145px),840px); object-fit: contain; background: #e9e4da; }
+  .product-gallery__main img { height: clamp(490px,calc(100svh - 145px),840px); object-fit: contain; background: #f1e3dc; }
   .product-gallery__thumbs { grid-column: 1; grid-row: 1; display: grid; gap: 8px; margin: 0; max-height: clamp(490px,calc(100svh - 145px),840px); overflow: auto; }
   .product-gallery__thumbs .gallery-thumb { width: 100%; min-width: 0; height: 74px; }
 }
@@ -83,4 +83,26 @@ html { scroll-padding-top: var(--mast-height); }
   ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .23s; }
   ::view-transition-group(masthead) { animation-duration: 0s; }
   ::view-transition-group(look-photo) { animation-duration: .46s; animation-timing-function: cubic-bezier(.22,.8,.3,1); }
+}
+
+/* Ruchs brand: logo lockup and rose-gold accents (wine #4b1539, ivory #fffff0, rose gold #b85c64-#e6b19b). */
+.site-header { border-color: rgba(184, 92, 100, .28); }
+.brand--logo { flex-direction: row; align-items: center; gap: 10px; }
+.brand--logo img { display: block; width: auto; }
+.brand-monogram { height: 40px; }
+.brand-wordmark { height: 24px; }
+.brand--footer { align-items: flex-start; gap: 14px; }
+.brand--footer img { display: block; height: clamp(96px, 9vw, 132px); width: auto; }
+.site-footer .brand--footer small { color: #e6b19b; letter-spacing: .32em; font-size: 8px; margin: 0; }
+.site-footer .footer-main h2 { color: #e6b19b; }
+.site-footer a:hover { color: #e6b19b; }
+.site-footer .footer-bottom { border-color: rgba(230, 177, 155, .3); }
+.eyebrow { color: #a64b5b; }
+.cart-count { background: #b85c64; }
+.price-save { background: var(--rose-gold-sheen); color: #2a1420; }
+.button-dark:hover { background: #330d26; }
+@media (max-width: 760px) {
+  .brand-monogram { height: 32px; }
+  .brand-wordmark { height: 19px; }
+  .brand--logo { gap: 8px; }
 }
