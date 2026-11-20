@@ -80,6 +80,7 @@
       });
       const data = await response.json();
       if (!response.ok || !data.url) throw new Error(data.error || 'Checkout is unavailable right now. Please try again.');
+      track('begin_checkout', 'InitiateCheckout', items.map(item => ({id: item.id, name: item.title, variant: item.variant, price: item.price, quantity: item.quantity})));
       location.href = data.url;
     } catch (error) {
       note.textContent = error.message || 'Checkout is unavailable right now. Please try again.';
@@ -174,7 +175,10 @@
       button.disabled = true;
       button.textContent = 'Unavailable';
     } else {
-      $('#product-price').textContent = money(choice.variant.price);
+      const compareAt = Number(choice.variant.compare_at_price || 0);
+      $('#product-price').innerHTML = compareAt > Number(choice.variant.price)
+        ? `${money(choice.variant.price)} <s class="price-was" aria-label="Was ${money(compareAt)}">${money(compareAt)}</s> <span class="price-save">Save ${Math.round((1 - Number(choice.variant.price) / compareAt) * 100)}%</span>`
+        : money(choice.variant.price);
       button.disabled = false;
       button.innerHTML = 'Add to bag <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12h16m-6-6 6 6-6 6"/></svg>';
     }
@@ -189,7 +193,16 @@
     if (existing) existing.quantity += amount;
     else items.push({id: variant.id, handle: product.handle, title: product.title, variant: variant.title, price: Number(variant.price), quantity: amount, image: imagePath(product.images[0].src)});
     write(CART_KEY, items);
+    track('add_to_cart', 'AddToCart', [{id: variant.id, name: product.title, variant: variant.title, price: Number(variant.price), quantity: amount}]);
     openCart();
+  }
+  // Google Analytics and Meta Pixel events (both tags load in every page head).
+  function track(gaEvent, metaEvent, lines) {
+    const value = lines.reduce((sum, line) => sum + line.price * line.quantity, 0);
+    try {
+      window.gtag?.('event', gaEvent, {currency: 'INR', value, items: lines.map(line => ({item_id: String(line.id), item_name: line.name, item_variant: line.variant, price: line.price, quantity: line.quantity}))});
+      window.fbq?.('track', metaEvent, {currency: 'INR', value, content_type: 'product', content_ids: lines.map(line => String(line.id)), num_items: lines.reduce((sum, line) => sum + line.quantity, 0)});
+    } catch { /* tracking must never block shopping */ }
   }
 
   function filterSearch() {
@@ -241,6 +254,30 @@
     }
     const checkoutButton = target.closest('[data-checkout]');
     if (checkoutButton && !checkoutButton.disabled) startCheckout(checkoutButton);
+  });
+  // Newsletter and contact forms post to the Worker without leaving the page.
+  document.addEventListener('submit', async event => {
+    const form = event.target.closest?.('[data-ajax-form]');
+    if (!form) return;
+    event.preventDefault();
+    const status = form.querySelector('.form-status');
+    const button = form.querySelector('[type="submit"]');
+    button.disabled = true;
+    status.textContent = 'Sending…';
+    status.classList.remove('is-error');
+    try {
+      const response = await fetch(form.action, {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(form)))});
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Something went wrong. Please try again.');
+      status.textContent = data.message || 'Thank you.';
+      form.reset();
+      if (form.action.endsWith('/api/subscribe')) { try { window.gtag?.('event', 'sign_up', {method: 'newsletter'}); window.fbq?.('track', 'Lead'); } catch { /* tracking is optional */ } }
+    } catch (error) {
+      status.textContent = error.message;
+      status.classList.add('is-error');
+    } finally {
+      button.disabled = false;
+    }
   });
   document.addEventListener('change', event => {
     if (event.target.matches('.variant-choice input')) updateVariant();

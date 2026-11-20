@@ -1,18 +1,32 @@
+import js from "@eslint/js";
+import globals from "globals";
 import { defineConfig, globalIgnores } from "eslint/config";
-import nextVitals from "eslint-config-next/core-web-vitals";
-import nextTs from "eslint-config-next/typescript";
 
-const eslintConfig = defineConfig([
-  ...nextVitals,
-  ...nextTs,
-  // Override default ignores of eslint-config-next.
-  globalIgnores([
-    // Default ignores of eslint-config-next:
-    ".next/**",
-    "out/**",
-    "build/**",
-    "next-env.d.ts",
-  ]),
+export default defineConfig([
+  // Generated output and third-party theme files are not linted.
+  globalIgnores(["dist/**", "shopify-theme/**", "node_modules/**", ".wrangler/**"]),
+  js.configs.recommended,
+  {
+    // Browser scripts served by the storefront.
+    files: ["scripts/**/*.js"],
+    languageOptions: { ecmaVersion: 2024, sourceType: "script", globals: { ...globals.browser } },
+  },
+  {
+    files: ["scripts/showcase-motion.js", "scripts/decart-live-source.js"],
+    languageOptions: { sourceType: "module" },
+  },
+  {
+    // The Worker runs on Cloudflare; its bundle prepends page and catalog constants.
+    files: ["worker/**/*.js"],
+    languageOptions: {
+      ecmaVersion: 2024,
+      sourceType: "module",
+      globals: { ...globals.serviceworker, pages: "readonly", siteAssets: "readonly", productImages: "readonly", shopifyVariants: "readonly" },
+    },
+  },
+  {
+    // Node build scripts and tests.
+    files: ["scripts/**/*.mjs", "tests/**/*.mjs", "*.mjs"],
+    languageOptions: { ecmaVersion: 2024, sourceType: "module", globals: { ...globals.node } },
+  },
 ]);
-
-export default eslintConfig;

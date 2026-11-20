@@ -16,11 +16,32 @@ npm run dev
 
 Open <http://localhost:4173/>. Run `npm run build` to regenerate all pages, the Decart browser bundle, and `dist/server/index.js` from `data/content.json` and `dist/products.json`. The build requires Node.js, Python, `beautifulsoup4`, and `Pillow`. Set `GENLOOK_API_KEY` and `DECART_API_KEY` in your local environment for photo and live try-on. Configure the same keys as Cloudflare Worker secrets; permanent keys are never placed in browser code or the repository.
 
-The photo try-on panel uses the currently selected Ruchs product photo as a worn-model garment reference. It resizes the customer's photo in the browser, sends it to the same-origin Worker, and displays a downloadable generated result. Photos are not saved by this storefront; Genlook is asked to retain the generated result for one day. A D1 quota limits this public demo to two attempts per visitor and five attempts across the site per UTC day, because each generation uses a Genlook credit. When Genlook returns HTTP 402, photo try-on pauses for 15 minutes and failed credit checks do not consume the quota.
+Run `npm run check` to lint, type-check, build, and run every Worker test (`npm test`). Tests use a local SQLite database built from the same `drizzle/` migrations as production, so they need Node.js 22.5 or later.
+
+The photo try-on panel uses the currently selected Ruchs product photo as a worn-model garment reference. It resizes the customer's photo in the browser, sends it to the same-origin Worker, and displays a downloadable generated result. Photos are not saved by this storefront; Genlook is asked to retain the generated result for one day. A D1 quota limits photo try-on to two attempts per visitor and five attempts across the site per UTC day by default, because each generation uses a Genlook credit. Raise or lower the limits without code changes by setting the Worker variables `TRYON_DAILY_LIMIT`, `TRYON_VISITOR_LIMIT`, `LIVE_DAILY_LIMIT`, and `LIVE_VISITOR_LIMIT` (in `wrangler.jsonc` under `vars`, or in the Cloudflare dashboard). When Genlook returns HTTP 402, photo try-on pauses for 15 minutes and failed credit checks do not consume the quota.
 
 The live panel uses Decart Lucy VTON 3.6 to transform the shopper's camera stream. The Worker uses `DECART_API_KEY` to mint a short-lived token restricted to this site's origin, one model, and a 30-second maximum session. The browser receives only that client token. Live sessions are limited to two per visitor and five across the site per UTC day; failed token requests are refunded. Camera tracks and the Decart connection stop when the panel closes, the timer expires, the page is hidden, or the camera disconnects. Decart charges per second of active generation. The Ruchs catalog uses model photos rather than isolated garment shots, so live garment fidelity may vary.
 
 The product pages, collections, search, wishlist, and informational routes are local. Cart and wishlist changes are saved in the browser.
+
+## Catalog updates
+
+Pages are generated from a snapshot of the Shopify catalog in `dist/products.json` and the collection lists in `data/content.json`; only stock and prices are live. After adding or editing products, photos, descriptions, or collections in Shopify, run `npm run sync:deploy`. It fetches the public catalog from the store (`npm run sync`), downloads new photos into `dist/cdn/shop/files`, rebuilds every page, and deploys.
+
+## SEO, analytics and caching
+
+The build (`scripts/build_worker.py`) adds a canonical URL, Open Graph and Twitter tags, and `Product` structured data (prices in INR, availability per variant) to every page, and serves `/sitemap.xml` and `/robots.txt`. Search and wishlist pages are `noindex`. Google Analytics 4 (`G-M0EHDZSDPJ`) and the Meta Pixel (`1412294113670313`), carried over from the ruchs.in theme, load on every page; the bag sends `add_to_cart`/`AddToCart` and `begin_checkout`/`InitiateCheckout` events, and the newsletter sends `sign_up`/`Lead`. Purchases are tracked on Shopify checkout by the store's Google and Meta apps.
+
+Pages are served with `cache-control: no-cache`. Scripts and styles are referenced with a content hash (`/remap.js?v=…`) and cached for a year, so each deploy is visible immediately.
+
+## Newsletter and contact messages
+
+The footer newsletter (`POST /api/subscribe`) and the contact page form (`POST /api/contact`) store submissions in the D1 tables `subscribers` and `contact_messages`. Forms only accept requests from the site's own origin, silently drop submissions that fill a hidden trap field, and allow ten submissions per visitor per day. Read them with:
+
+```bash
+npx wrangler d1 execute ruchs-tryon-quota --remote --command "SELECT * FROM contact_messages ORDER BY id DESC LIMIT 20"
+npx wrangler d1 execute ruchs-tryon-quota --remote --command "SELECT email, created_at FROM subscribers ORDER BY created_at DESC"
+```
 
 ## Shopify checkout
 
@@ -38,4 +59,4 @@ Payment methods come from Shopify's payment settings: Razorpay for UPI, cards, N
 
 ## Cloudflare hosting
 
-The public site is [myruchs.com](https://myruchs.com/). Cloudflare serves the generated storefront, locally optimized catalog images, fonts, and film. The Worker handles both try-on modes through a D1 quota database. Build and deploy with `npm run deploy:cloudflare`. The remote database `ruchs-tryon-quota` is bound as `DB`; apply `drizzle/0000_youthful_warbird.sql` to it before the first deployment. Set `GENLOOK_API_KEY` and `DECART_API_KEY` with `wrangler secret put` after deployment. Neither secret is stored in source control. Provider credits are separate from Cloudflare hosting.
+The public site is [myruchs.com](https://myruchs.com/). Cloudflare serves the generated storefront, locally optimized catalog images, fonts, and film. The Worker handles both try-on modes through a D1 quota database. Build and deploy with `npm run deploy:cloudflare`. The remote database `ruchs-tryon-quota` is bound as `DB`. Schema changes go in `db/schema.ts`; run `npm run db:generate` and apply each new file with `npm run db:migrate:remote -- drizzle/<file>.sql` before deploying code that uses it (`0000` and `0001` are applied). Set `GENLOOK_API_KEY` and `DECART_API_KEY` with `wrangler secret put` after deployment. Neither secret is stored in source control. Provider credits are separate from Cloudflare hosting.

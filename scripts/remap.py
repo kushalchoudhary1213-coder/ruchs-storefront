@@ -32,6 +32,7 @@ ICONS = {
     "chevron": '<path d="m6 9 6 6 6-6"/>',
     "minus": '<path d="M4 12h16"/>',
     "plus": '<path d="M4 12h16M12 4v16"/>',
+    "user": '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
 }
 
 
@@ -83,11 +84,12 @@ def header() -> str:
       <nav class="primary-nav" aria-label="Primary"><a href="/collections/all/">Shop</a><a href="/#lookbook">Lookbook</a><a href="/#wardrobe">Selected pieces</a></nav>
       <a class="brand" href="/" aria-label="Ruchs home"><span>RUCHS</span><small>BY RUCHI SACHDEVA</small></a>
       <div class="header-actions"><button type="button" class="icon-button" data-search-open aria-label="Search">{icon('search')}</button>
+        <a class="icon-button" href="/account" aria-label="Your account">{icon('user')}</a>
         <a class="icon-button" href="/pages/swym-wishlist/" aria-label="Wishlist">{icon('heart')}</a>
         <button type="button" class="icon-button bag-button" data-cart-open aria-label="Open cart">{icon('bag')}<span class="cart-count" data-cart-count hidden>0</span></button></div>
     </div></header>
     <div class="mobile-menu" id="mobile-menu" hidden><div class="mobile-menu__top"><span>Explore Ruchs</span><button class="icon-button" data-menu-close aria-label="Close menu">{icon('close')}</button></div><nav aria-label="Mobile">
-      <a href="/collections/all/">Shop all {icon('arrow')}</a>{links}<a href="/#lookbook">Lookbook</a><a href="/#wardrobe">Selected pieces</a><a href="/pages/swym-wishlist/">Wishlist</a><a href="/pages/about-us/">Our story</a><a href="/pages/contact/">Contact</a></nav></div>
+      <a href="/collections/all/">Shop all {icon('arrow')}</a>{links}<a href="/#lookbook">Lookbook</a><a href="/#wardrobe">Selected pieces</a><a href="/pages/swym-wishlist/">Wishlist</a><a href="/account">Your account</a><a href="/pages/about-us/">Our story</a><a href="/pages/contact/">Contact</a></nav></div>
     <div class="search-panel" id="search-panel" hidden><div class="search-panel__inner"><form action="/search/" role="search"><label for="site-search">Search the collection</label><div><input id="site-search" name="q" type="search" placeholder="Try dresses, sets, skirts…" autocomplete="off"><button type="submit" aria-label="Submit search">{icon('arrow')}</button></div></form><button class="icon-button" data-search-close aria-label="Close search">{icon('close')}</button></div></div>'''
 
 
@@ -96,7 +98,9 @@ def footer() -> str:
     return f'''<footer class="site-footer"><div class="footer-main wrap"><div class="footer-brand"><a class="brand" href="/"><span>RUCHS</span><small>BY RUCHI SACHDEVA</small></a><p>Womenswear by Ruchi Sachdeva.</p></div>
       <div class="footer-links"><h2>Explore</h2><a href="/collections/all/">Shop all</a>{collection_links}</div>
       <div class="footer-links"><h2>About</h2><a href="/pages/about-us/">Our story</a><a href="/pages/contact/">Contact</a><a href="/policies/shipping-policy/">Shipping</a><a href="/policies/refund-policy/">Returns & exchanges</a><a href="/policies/privacy-policy/">Privacy</a></div>
-      <div class="footer-connect"><h2>Follow Ruchs</h2><a class="text-link" href="https://www.instagram.com/ruchsofficial/" target="_blank" rel="noopener">Follow on Instagram {icon('arrow')}</a></div></div>
+      <div class="footer-connect"><h2>Join the Ruchs list</h2><p>New pieces, restocks and private previews, by email.</p>
+        <form class="newsletter-form" action="/api/subscribe" method="post" data-ajax-form><input type="hidden" name="source" value="footer"><label class="visually-hidden" for="newsletter-email">Email address</label><div><input id="newsletter-email" name="email" type="email" autocomplete="email" placeholder="Your email address" required><button type="submit" aria-label="Join the list">{icon('arrow')}</button></div><input class="form-trap" name="company" tabindex="-1" autocomplete="off" aria-hidden="true"><p class="form-status" role="status" aria-live="polite"></p></form>
+        <a class="text-link" href="https://www.instagram.com/ruchsofficial/" target="_blank" rel="noopener">Follow on Instagram {icon('arrow')}</a></div></div>
       <div class="footer-bottom wrap"><span>© 2026 Ruchs</span><a href="/policies/terms-of-service/">Terms of service</a></div></footer>
       <div class="cart-layer" id="cart-layer" hidden><button class="cart-scrim" data-cart-close aria-label="Close cart"></button><aside class="cart-drawer" role="dialog" aria-modal="true" aria-labelledby="cart-title"><header><h2 id="cart-title">Your bag <span data-cart-heading-count>0</span></h2><button class="icon-button" data-cart-close aria-label="Close cart">{icon('close')}</button></header><div class="cart-drawer__body" data-cart-lines></div><footer data-cart-footer></footer></aside></div>'''
 
@@ -260,6 +264,18 @@ def product_detail(product: dict) -> str:
     return page(product["title"], body, f"Explore the {product['title']} at Ruchs.")
 
 
+CONTACT_FORM = f'''<form class="contact-form" action="/api/contact" method="post" data-ajax-form>
+  <h2>Write to us</h2>
+  <div class="contact-form__row"><label>Name<input name="name" autocomplete="name" required maxlength="120"></label><label>Email<input name="email" type="email" autocomplete="email" required maxlength="254"></label></div>
+  <div class="contact-form__row"><label>Phone <small>(optional)</small><input name="phone" type="tel" autocomplete="tel" maxlength="30"></label><label>Order number <small>(optional)</small><input name="order" maxlength="40"></label></div>
+  <label>Message<textarea name="message" rows="6" required minlength="5" maxlength="4000"></textarea></label>
+  <input class="form-trap" name="company" tabindex="-1" autocomplete="off" aria-hidden="true">
+  <button type="submit" class="button button-dark">Send message {icon("arrow")}</button>
+  <p class="form-status" role="status" aria-live="polite"></p>
+  <p class="contact-form__note">Prefer email? Write to <a href="mailto:ruchsofficial@gmail.com">ruchsofficial@gmail.com</a>.</p>
+</form>'''
+
+
 def content_page(route: str, blocks: list[dict]) -> str:
     if route == "/pages/swym-wishlist":
         body = '<section class="page-intro wrap"><p class="eyebrow">YOUR EDIT</p><h1>Saved pieces</h1><p>Keep the pieces you love close.</p></section><section class="section wrap"><div class="product-grid" id="wishlist-grid"></div><p class="empty-results" id="wishlist-empty">Your wishlist is empty. <a href="/collections/all/">Explore the collection</a>.</p></section>'
@@ -280,7 +296,7 @@ def content_page(route: str, blocks: list[dict]) -> str:
         else:
             elements.append(f'<p>{text(value)}</p>')
     if route == "/pages/contact":
-        elements.insert(0, '<a class="button button-dark" href="mailto:ruchsofficial@gmail.com">Email the Ruchs team ' + icon("arrow") + '</a>')
+        elements.insert(0, CONTACT_FORM)
     if route == "/blogs/news" and len(elements) == 0:
         elements.append('<p>There are no published stories yet. Discover the collection while we prepare the next chapter.</p>')
     body = f'<section class="page-intro wrap"><p class="eyebrow">RUCHS · INFORMATION</p><h1>{text(title)}</h1></section><section class="article-section wrap"><div class="article-content">{"".join(elements)}</div></section>'

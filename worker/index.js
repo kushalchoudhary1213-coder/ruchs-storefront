@@ -1,13 +1,17 @@
 const providerBase = 'https://api.genlook.app/tryon/v1';
 const noStore = {'cache-control': 'no-store'};
-const dailyLimit = 5;
-const visitorLimit = 2;
+// Try-on limits per UTC day. Override with Worker variables (wrangler.jsonc
+// "vars") without code changes; each generation or live session uses paid
+// provider credits.
+const limitDefaults = {TRYON_DAILY_LIMIT: 5, TRYON_VISITOR_LIMIT: 2, LIVE_DAILY_LIMIT: 5, LIVE_VISITOR_LIMIT: 2};
+function limit(env, name) {
+  const value = Number(env?.[name]);
+  return Number.isInteger(value) && value >= 0 ? value : limitDefaults[name];
+}
 const providerPauseMinutes = 15;
 const providerUnavailableMessage = 'Virtual try-on is paused until Genlook credits are available.';
 const liveModel = 'lucy-vton-3.6';
 const liveSessionSeconds = 30;
-const liveDailyLimit = 5;
-const liveVisitorLimit = 2;
 
 // Shopify backend for ruchs.in. Checkout always works through Shopify cart
 // permalinks; with SHOPIFY_STOREFRONT_TOKEN set, carts are created through the
@@ -94,10 +98,10 @@ async function liveStatus(request, env) {
       .bind(day, 'live-global', 'all').first();
     const individual = await env.DB.prepare('SELECT count FROM tryon_quota WHERE day = ? AND scope = ? AND subject = ?')
       .bind(day, 'live-visitor', visitor).first();
-    if (Number(global?.count || 0) >= liveDailyLimit) {
+    if (Number(global?.count || 0) >= limit(env, 'LIVE_DAILY_LIMIT')) {
       return json({available: false, reason: 'Today’s live previews are full. Please try again tomorrow.'});
     }
-    if (Number(individual?.count || 0) >= liveVisitorLimit) {
+    if (Number(individual?.count || 0) >= limit(env, 'LIVE_VISITOR_LIMIT')) {
       return json({available: false, reason: 'You have used today’s live previews. Please try again tomorrow.'});
     }
     return json({available: true, reason: null, maxSessionSeconds: liveSessionSeconds});
@@ -142,10 +146,10 @@ async function createLiveToken(request, env) {
   let visitor;
   try {
     visitor = await visitorHash(request, env.DECART_API_KEY, day);
-    if (!await reserveQuota(env.DB, day, 'live-visitor', visitor, liveVisitorLimit)) {
+    if (!await reserveQuota(env.DB, day, 'live-visitor', visitor, limit(env, 'LIVE_VISITOR_LIMIT'))) {
       return json({error: 'You have used today’s live previews. Please try again tomorrow.'}, 429);
     }
-    if (!await reserveQuota(env.DB, day, 'live-global', 'all', liveDailyLimit)) {
+    if (!await reserveQuota(env.DB, day, 'live-global', 'all', limit(env, 'LIVE_DAILY_LIMIT'))) {
       await refundQuota(env.DB, day, 'live-visitor', visitor);
       return json({error: 'Today’s live previews are full. Please try again tomorrow.'}, 429);
     }
@@ -215,10 +219,10 @@ async function tryOn(request, env) {
   let visitor;
   try {
     visitor = await visitorHash(request, env.GENLOOK_API_KEY, day);
-    if (!await reserveQuota(env.DB, day, 'visitor', visitor, visitorLimit)) {
+    if (!await reserveQuota(env.DB, day, 'visitor', visitor, limit(env, 'TRYON_VISITOR_LIMIT'))) {
       return json({error: 'You have used today’s try-on previews. Please try again tomorrow.'}, 429);
     }
-    if (!await reserveQuota(env.DB, day, 'global', 'all', dailyLimit)) {
+    if (!await reserveQuota(env.DB, day, 'global', 'all', limit(env, 'TRYON_DAILY_LIMIT'))) {
       await refundQuota(env.DB, day, 'visitor', visitor);
       return json({error: 'Today’s try-on previews are full. Please try again tomorrow.'}, 429);
     }
@@ -412,9 +416,78 @@ async function inventory(request, env, context) {
   }
 }
 
+// Newsletter sign-ups and contact messages are stored in D1. Each form has a
+// hidden "company" field that people never fill in (bots do), and each visitor
+// can send at most formVisitorLimit submissions per UTC day.
+const formVisitorLimit = 10;
+const emailPattern = /^[^\s@<>()[\],;:"]{1,64}@[^\s@<>()[\],;:"]{1,190}\.[a-z]{2,24}$/i;
+
+async function readForm(request) {
+  const type = request.headers.get('content-type') || '';
+  if (type.includes('application/json')) return await request.json();
+  return Object.fromEntries(await request.formData());
+}
+
+const clean = (value, max) => String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
+
+async function acceptForm(request, env) {
+  const origin = new URL(request.url).origin;
+  if (request.headers.get('origin') !== origin) return {error: json({error: 'This request must come from the storefront.'}, 403)};
+  if (!env.DB) return {error: json({error: 'This form is unavailable right now. Please email ruchsofficial@gmail.com.'}, 503)};
+  if (Number(request.headers.get('content-length') || 0) > 20000) return {error: json({error: 'Your message is too long.'}, 413)};
+  let fields;
+  try { fields = await readForm(request); }
+  catch { return {error: json({error: 'The form could not be read.'}, 400)}; }
+  if (clean(fields.company, 100)) return {error: json({ok: true})};
+  const day = new Date().toISOString().slice(0, 10);
+  const visitor = await visitorHash(request, env.SHOPIFY_STOREFRONT_TOKEN || 'ruchs-forms', day);
+  if (!await reserveQuota(env.DB, day, 'form-visitor', visitor, formVisitorLimit)) {
+    return {error: json({error: 'Too many submissions today. Please try again tomorrow.'}, 429)};
+  }
+  return {fields};
+}
+
+async function subscribe(request, env) {
+  const {fields, error} = await acceptForm(request, env);
+  if (error) return error;
+  const email = clean(fields.email, 254).toLowerCase();
+  if (!emailPattern.test(email)) return json({error: 'Please enter a valid email address.'}, 400);
+  try {
+    await env.DB.prepare('INSERT INTO subscribers (email, source, created_at) VALUES (?, ?, ?) ON CONFLICT(email) DO NOTHING')
+      .bind(email, clean(fields.source, 60) || 'footer', new Date().toISOString()).run();
+  } catch (failure) {
+    console.error('Subscribe failed', failure?.message || 'unknown');
+    return json({error: 'Could not sign you up right now. Please try again.'}, 503);
+  }
+  return json({ok: true, message: 'You’re on the list. Thank you for joining Ruchs.'});
+}
+
+async function contact(request, env) {
+  const {fields, error} = await acceptForm(request, env);
+  if (error) return error;
+  const name = clean(fields.name, 120);
+  const email = clean(fields.email, 254).toLowerCase();
+  const phone = clean(fields.phone, 30);
+  const orderNumber = clean(fields.order, 40);
+  const message = String(fields.message ?? '').trim().slice(0, 4000);
+  if (!name) return json({error: 'Please tell us your name.'}, 400);
+  if (!emailPattern.test(email)) return json({error: 'Please enter a valid email address.'}, 400);
+  if (message.length < 5) return json({error: 'Please write a short message.'}, 400);
+  try {
+    await env.DB.prepare('INSERT INTO contact_messages (name, email, phone, order_number, message, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+      .bind(name, email, phone || null, orderNumber || null, message, new Date().toISOString()).run();
+  } catch (failure) {
+    console.error('Contact message failed', failure?.message || 'unknown');
+    return json({error: 'Could not send your message right now. Please email ruchsofficial@gmail.com.'}, 503);
+  }
+  return json({ok: true, message: 'Thank you. The Ruchs team will reply by email during support hours (Monday to Friday, 11 AM – 7 PM IST).'});
+}
+
 export default {
   async fetch(request, env, context) {
     const path = new URL(request.url).pathname;
+    if (path === '/api/subscribe' && request.method === 'POST') return subscribe(request, env);
+    if (path === '/api/contact' && request.method === 'POST') return contact(request, env);
     if (path === '/api/checkout' && request.method === 'POST') return checkout(request, env);
     if (path === '/api/inventory' && request.method === 'GET') return inventory(request, env, context);
     if (path === '/api/live/status' && request.method === 'GET') return liveStatus(request, env);
@@ -426,7 +499,7 @@ export default {
         const day = new Date().toISOString().slice(0, 10);
         if (await providerPaused(env.DB, day)) return json({available: false, reason: providerUnavailableMessage});
         const row = await env.DB.prepare('SELECT count FROM tryon_quota WHERE day = ? AND scope = ? AND subject = ?').bind(day, 'global', 'all').first();
-        const available = Number(row?.count || 0) < dailyLimit;
+        const available = Number(row?.count || 0) < limit(env, 'TRYON_DAILY_LIMIT');
         return json({available, reason: available ? null : 'Today’s try-on previews are full. Please try again tomorrow.'});
       } catch {
         return json({available: false, reason: 'Try-on is unavailable right now.'});
@@ -441,10 +514,17 @@ export default {
     const legacy = legacyRedirects[path.replace(/\/$/, '')];
     if (legacy) return Response.redirect(new URL(legacy, request.url).href, 301);
     const key = path === '/' ? '/' : path.replace(/\/$/, '') + '/';
+    if (path === '/favicon.ico') return Response.redirect(new URL('/showcase/ruchs-icon.png', request.url).href, 301);
     const html = pages[key];
-    if (html) return new Response(request.method === 'HEAD' ? null : html, {headers: {'content-type': 'text/html; charset=utf-8'}});
+    // Pages are always revalidated so a deploy shows at once; they reference
+    // content-hashed script and style URLs that can be cached for a year.
+    if (html) return new Response(request.method === 'HEAD' ? null : html, {headers: {'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache'}});
     const asset = siteAssets[path];
-    if (asset) return new Response(request.method === 'HEAD' ? null : asset.content, {headers: {'content-type': asset.type}});
+    if (asset) {
+      const versioned = new URL(request.url).searchParams.has('v');
+      const cacheControl = versioned ? 'public, max-age=31536000, immutable' : 'public, max-age=300';
+      return new Response(request.method === 'HEAD' ? null : asset.content, {headers: {'content-type': asset.type, 'cache-control': cacheControl}});
+    }
     return new Response('Not found', {status: 404});
   },
 };

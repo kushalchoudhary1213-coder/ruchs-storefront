@@ -1,35 +1,33 @@
-export function createLocalQuotaDb() {
-  const counters = new Map();
+// A local stand-in for the Worker's D1 binding, backed by Node's built-in
+// SQLite and the same migrations as production (drizzle/*.sql). Used by
+// `npm run dev` and the Worker tests.
+import {readdirSync, readFileSync} from 'node:fs';
+import {join} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {DatabaseSync} from 'node:sqlite';
+
+const migrations = fileURLToPath(new URL('../drizzle/', import.meta.url));
+
+export function createLocalDb(filename = ':memory:') {
+  const db = new DatabaseSync(filename);
+  for (const file of readdirSync(migrations).filter(name => name.endsWith('.sql')).sort()) {
+    for (const statement of readFileSync(join(migrations, file), 'utf8').split('--> statement-breakpoint')) {
+      if (statement.trim()) db.exec(statement.replace(/CREATE TABLE `/g, 'CREATE TABLE IF NOT EXISTS `'));
+    }
+  }
   return {
     prepare(sql) {
-      return {
-        bind(...args) {
-          return {
-            async first() {
-              if (sql.trimStart().startsWith('SELECT')) {
-                const count = counters.get(args.join(':'));
-                return count == null ? null : {count};
-              }
-              const [day, scope, subject, limit] = args;
-              const key = [day, scope, subject].join(':');
-              const count = counters.get(key) || 0;
-              if (count >= limit) return null;
-              counters.set(key, count + 1);
-              return {count: count + 1};
-            },
-            async run() {
-              const [day, scope, subject] = args;
-              if (sql.trimStart().startsWith('UPDATE')) {
-                const key = [day, scope, subject].join(':');
-                counters.set(key, Math.max(0, (counters.get(key) || 0) - 1));
-              } else if (sql.includes("'provider', 'genlook'")) {
-                counters.set([day, 'provider', 'genlook'].join(':'), args[1]);
-              }
-              return {success: true};
-            },
-          };
-        },
-      };
+      const statement = db.prepare(sql);
+      const bound = (args = []) => ({
+        // D1 returns plain objects; node:sqlite rows have a null prototype.
+        async first() { const row = statement.get(...args); return row ? {...row} : null; },
+        async all() { return {results: statement.all(...args).map(row => ({...row})), success: true}; },
+        async run() { const info = statement.run(...args); return {success: true, meta: {changes: Number(info.changes), last_row_id: Number(info.lastInsertRowid)}}; },
+      });
+      return {...bound(), bind: (...args) => bound(args)};
     },
   };
 }
+
+// Kept for existing imports.
+export const createLocalQuotaDb = createLocalDb;
