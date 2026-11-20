@@ -133,3 +133,38 @@ html { scroll-padding-top: var(--mast-height); }
 .price-save { font-size: 12px; letter-spacing: .02em; }
 .cart-checkout .button small { font-size: 12px; }
 .product-accordions details p, .product-accordions details > div, .article-content p { max-width: 34em; }
+
+/* Product page: size choice, delivery facts and the phone buy bar. */
+.variant-choice.is-sold-out span { color: var(--muted); text-decoration: line-through; border-style: dashed; cursor: not-allowed; }
+.variant-choice.is-sold-out input { cursor: not-allowed; }
+.variant-group.is-missing .variant-choice span { border-color: #9b1c31; }
+.variant-error { margin: 10px 0 0; font-size: 13px; color: #9b1c31; }
+.buy-facts { list-style: none; margin: 18px 0 0; padding: 0; border-top: 1px solid var(--line); }
+.buy-facts li { padding: 11px 0; border-bottom: 1px solid var(--line); font-size: 13px; line-height: 1.55; color: var(--muted); }
+.buy-facts a { color: var(--plum); }
+.buy-bar { display: none; }
+@media (max-width: 760px) {
+  .buy-bar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 120;
+    display: flex; align-items: center; gap: 14px;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    background: var(--ivory); border-top: 1px solid var(--line); box-shadow: 0 -8px 24px rgba(42, 20, 32, .08);
+    transform: translateY(110%); visibility: hidden;
+    transition: transform var(--duration-fast, 250ms) var(--ease-smooth-out, ease-out), visibility 0s linear var(--duration-fast, 250ms);
+  }
+  .buy-bar.is-visible { transform: none; visibility: visible; transition: transform var(--duration-fast, 250ms) var(--ease-smooth-out, ease-out); }
+  .buy-bar__info { flex: 1; min-width: 0; display: grid; gap: 2px; }
+  .buy-bar__info strong { font: 500 18px/1.15 var(--display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .buy-bar__info span { font-size: 13px; font-variant-numeric: tabular-nums; }
+  .buy-bar__info .price-save { display: none; }
+  .buy-bar .button { flex: none; min-height: 48px; padding-inline: 22px; }
+  body:has(.buy-bar) .site-footer { padding-bottom: 88px; }
+}
+@media (prefers-reduced-motion: reduce) { .buy-bar, .buy-bar.is-visible { transition: none; } }
+
+/* Bag: comfortable quantity targets and a per-item price under multi-item lines. */
+.cart-line__qty button { width: 40px; height: 40px; }
+.cart-line__qty .cart-remove { height: 40px; }
+.cart-line__each { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
+.breadcrumbs { font-size: 13px; }
+.variant-choice span { font-size: 13px; }

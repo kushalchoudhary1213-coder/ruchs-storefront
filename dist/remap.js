@@ -126,7 +126,7 @@
       foot.innerHTML = '';
       return;
     }
-    lines.innerHTML = items.map(item => `<article class="cart-line"><a href="/products/${escapeHTML(item.handle)}/"><img src="${escapeHTML(item.image)}" alt="${escapeHTML(item.title)}"></a><div><h3><a href="/products/${escapeHTML(item.handle)}/">${escapeHTML(item.title)}</a></h3><p>${escapeHTML(item.variant)}</p><strong>${money(item.price)}</strong><div class="cart-line__qty"><button type="button" data-cart-minus="${item.id}" aria-label="Decrease ${escapeHTML(item.title)} quantity">−</button><span>${item.quantity}</span><button type="button" data-cart-plus="${item.id}" aria-label="Increase ${escapeHTML(item.title)} quantity">+</button><button type="button" class="cart-remove" data-cart-remove="${item.id}">Remove</button></div></div></article>`).join('');
+    lines.innerHTML = items.map(item => `<article class="cart-line"><a href="/products/${escapeHTML(item.handle)}/"><img src="${escapeHTML(item.image)}" alt="${escapeHTML(item.title)}"></a><div><h3><a href="/products/${escapeHTML(item.handle)}/">${escapeHTML(item.title)}</a></h3><p>${escapeHTML(item.variant)}</p><strong>${money(item.price * item.quantity)}</strong>${item.quantity > 1 ? `<small class="cart-line__each">${money(item.price)} each</small>` : ''}<div class="cart-line__qty"><button type="button" data-cart-minus="${item.id}" aria-label="Decrease ${escapeHTML(item.title)} quantity">−</button><span>${item.quantity}</span><button type="button" data-cart-plus="${item.id}" aria-label="Increase ${escapeHTML(item.title)} quantity">+</button><button type="button" class="cart-remove" data-cart-remove="${item.id}">Remove</button></div></div></article>`).join('');
     const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
     foot.innerHTML = `<div class="cart-subtotal"><span>Subtotal</span><strong>${money(subtotal)}</strong></div><div class="cart-checkout"><button type="button" class="button button-dark" data-checkout>Checkout <small>UPI, cards &amp; cash on delivery</small></button></div><p class="cart-note">${cartNote}</p>`;
   }
@@ -165,15 +165,67 @@
     const variant = product.variants.find(item => [item.option1, item.option2, item.option3].filter(Boolean).every((value, index) => value === selected[index]));
     return {product, variant};
   }
+  // A choice the shopper still has to make (sizes start unselected).
+  const missingGroup = () => $$('.variant-group').find(group => !group.querySelector('input:checked'));
+  function clearChoiceError(group) {
+    group.classList.remove('is-missing');
+    const note = group.querySelector('[data-variant-error]');
+    if (note) { note.hidden = true; note.textContent = ''; }
+  }
+  function showChoiceError(group) {
+    const name = group.querySelector('legend').textContent.trim().toLowerCase();
+    const note = group.querySelector('[data-variant-error]');
+    group.classList.add('is-missing');
+    if (note) { note.textContent = `Choose a ${name} to add this to your bag.`; note.hidden = false; }
+    group.scrollIntoView({block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
+    group.querySelector('input:not(:disabled)')?.focus({preventScroll: true});
+  }
+  // Sold-out values are struck through and cannot be picked, given the other choices made.
+  function markSoldOut(product) {
+    const selected = product.options.map(option => $(`input[name="option-${option.position}"]:checked`)?.value);
+    product.options.forEach((option, index) => {
+      $$(`input[name="option-${option.position}"]`).forEach(input => {
+        const inStock = product.variants.some(variant => variant.available && [variant.option1, variant.option2, variant.option3]
+          .every((value, i) => value == null || (i === index ? value === input.value : !selected[i] || value === selected[i])));
+        input.disabled = !inStock;
+        input.closest('.variant-choice').classList.toggle('is-sold-out', !inStock);
+        input.closest('.variant-choice').title = inStock ? '' : 'Sold out';
+        if (!inStock && input.checked) input.checked = false;
+      });
+    });
+  }
+  function syncBuyBar(label, enabled) {
+    const bar = $('[data-buy-bar]');
+    if (!bar) return;
+    bar.querySelector('[data-buy-bar-price]').innerHTML = $('#product-price').innerHTML;
+    const button = bar.querySelector('[data-buy-bar-add]');
+    button.textContent = label;
+    button.disabled = !enabled;
+  }
   async function updateVariant() {
     if (!$('[data-product-handle]')) return;
     const choice = await currentVariant();
     if (!choice) return;
+    markSoldOut(choice.product);
     const button = $('[data-add-to-cart]');
+    if (missingGroup()) {
+      // Price range across in-stock variants that match the choices already made.
+      const picked = choice.product.options.map(option => $(`input[name="option-${option.position}"]:checked`)?.value);
+      const prices = choice.product.variants
+        .filter(variant => variant.available && [variant.option1, variant.option2, variant.option3].every((value, i) => value == null || !picked[i] || value === picked[i]))
+        .map(variant => Number(variant.price));
+      const low = Math.min(...prices), high = Math.max(...prices);
+      $('#product-price').textContent = prices.length ? (low === high ? money(low) : `From ${money(low)}`) : 'Sold out';
+      button.disabled = !prices.length;
+      button.innerHTML = prices.length ? 'Add to bag <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12h16m-6-6 6 6-6 6"/></svg>' : 'Sold out';
+      syncBuyBar(prices.length ? 'Add to bag' : 'Sold out', prices.length > 0);
+      return;
+    }
     if (!choice.variant || !choice.variant.available) {
       $('#product-price').textContent = choice.variant ? money(choice.variant.price) : 'Unavailable';
       button.disabled = true;
-      button.textContent = 'Unavailable';
+      button.textContent = choice.variant ? 'Sold out' : 'Unavailable';
+      syncBuyBar(button.textContent, false);
     } else {
       const compareAt = Number(choice.variant.compare_at_price || 0);
       $('#product-price').innerHTML = compareAt > Number(choice.variant.price)
@@ -181,9 +233,12 @@
         : money(choice.variant.price);
       button.disabled = false;
       button.innerHTML = 'Add to bag <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12h16m-6-6 6 6-6 6"/></svg>';
+      syncBuyBar('Add to bag', true);
     }
   }
   async function addCurrentProduct() {
+    const missing = missingGroup();
+    if (missing) { showChoiceError(missing); return; }
     const choice = await currentVariant();
     if (!choice?.variant?.available) return;
     const {product, variant} = choice;
@@ -244,7 +299,7 @@
     if (thumb) { $('#main-product-image').src = thumb.dataset.galleryImage; $$('.gallery-thumb').forEach(button => button.classList.toggle('is-active', button === thumb)); }
     if (target.closest('[data-qty-plus]')) $('#product-quantity').value = Number($('#product-quantity').value || 1) + 1;
     if (target.closest('[data-qty-minus]')) $('#product-quantity').value = Math.max(1, Number($('#product-quantity').value || 1) - 1);
-    if (target.closest('[data-add-to-cart]')) addCurrentProduct();
+    if (target.closest('[data-add-to-cart], [data-buy-bar-add]')) addCurrentProduct();
     const change = target.closest('[data-cart-plus],[data-cart-minus],[data-cart-remove]');
     if (change) {
       const id = Number(change.dataset.cartPlus || change.dataset.cartMinus || change.dataset.cartRemove);
@@ -295,11 +350,23 @@
     }
   });
   document.addEventListener('change', event => {
-    if (event.target.matches('.variant-choice input')) updateVariant();
+    if (event.target.matches('.variant-choice input')) { clearChoiceError(event.target.closest('.variant-group')); updateVariant(); }
     if (event.target.matches('#sort-products')) sortListing();
   });
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape') { if (!$('#cart-layer').hidden) closeCart(); closeMenu(); $('#search-panel').hidden = true; }
   });
+  // Phone buy bar: shown while the page's own Add to bag row is off screen.
+  const buyBar = $('[data-buy-bar]');
+  const buyRow = $('.buy-row');
+  if (buyBar && buyRow && 'IntersectionObserver' in window) {
+    new IntersectionObserver(([entry]) => {
+      const show = !entry.isIntersecting;
+      buyBar.classList.toggle('is-visible', show);
+      buyBar.setAttribute('aria-hidden', String(!show));
+      buyBar.querySelector('[data-buy-bar-add]').tabIndex = show ? 0 : -1;
+    }).observe(buyRow);
+  }
+
   updateCartCount(); syncWishlist(); updateVariant(); renderWishlist(); filterSearch(); refreshCartPrices();
 })();
