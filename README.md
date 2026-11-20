@@ -8,6 +8,8 @@ The opening film uses the supplied 4K garment-rail footage, with separate deskto
 
 ## Run locally
 
+The complete handoff includes the generated `dist/` storefront, source files, video assets, Cloudflare Worker, D1 migration, and test scripts. Copy `.env.example` to `.env.local` for local-only provider configuration. Never commit real provider keys.
+
 ```powershell
 npm run dev
 ```
