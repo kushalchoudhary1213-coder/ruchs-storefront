@@ -9,7 +9,7 @@ import {createLocalQuotaDb} from './local_quota.mjs';
 const port = Number(process.env.PORT || 4173);
 const DB = createLocalQuotaDb();
 const assetDirectory = fileURLToPath(new URL('../dist/static/', import.meta.url));
-const contentTypes = {'.mp4':'video/mp4', '.webp':'image/webp', '.jpg':'image/jpeg', '.css':'text/css', '.js':'text/javascript', '.woff2':'font/woff2', '.avif':'image/avif', '.png':'image/png'};
+const contentTypes = {'.mp4':'video/mp4', '.webm':'video/webm', '.webp':'image/webp', '.jpg':'image/jpeg', '.css':'text/css', '.js':'text/javascript', '.woff2':'font/woff2', '.avif':'image/avif', '.png':'image/png'};
 const mediaFiles = new Map();
 for (const entry of readdirSync(assetDirectory, {recursive: true, withFileTypes: true})) {
   if (!entry.isFile()) continue;

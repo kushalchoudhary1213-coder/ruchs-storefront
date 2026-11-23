@@ -14,7 +14,56 @@
   const timerLabel = layer.querySelector('[data-live-timer]');
   const product = document.querySelector('[data-product-handle]');
   const handle = product.dataset.productHandle;
-  const prompt = product.dataset.livePrompt;
+  const basePrompt = product.dataset.livePrompt;
+  const colourName = layer.querySelector('[data-live-colour-name]');
+  const pieceNote = layer.querySelector('[data-live-piece-note]');
+  const piece = layer.querySelector('.live-piece');
+  let colour = null; // {label, hex}
+  let finish = null; // {label, text}
+  // The model reads this every time it changes, so colour and finish switch live.
+  const REALISM = 'Photorealistic and true to life: visible fabric weave and texture, natural drape and folds that follow the body, crisp seams, stitching and hem, soft natural light and shadows on the fabric.';
+  function buildPrompt() {
+    return [
+      basePrompt,
+      colour
+        ? `Recolour the garment to ${colour.label.toLowerCase()} (${colour.hex}) while keeping its pattern, cut, sleeves and hem.`
+        : 'Preserve the garment\'s colour, pattern, cut, sleeves and hem.',
+      finish ? `Render the fabric with ${finish.text}.` : '',
+      REALISM,
+    ].filter(Boolean).join(' ');
+  }
+  function describeChoice() {
+    const parts = [colour?.label, finish?.label].filter(Boolean);
+    pieceNote.textContent = parts.length ? `Preview: ${parts.join(', ')}` : 'Current product photo';
+    piece.style.setProperty('--tint', colour ? colour.hex : 'transparent');
+    piece.classList.toggle('is-tinted', Boolean(colour));
+  }
+  function applyChoice() {
+    describeChoice();
+    if (stream && window.RuchsDecart?.setPrompt) {
+      window.RuchsDecart.setPrompt(buildPrompt()).then(() => setStatus('Updating your look live…')).catch(() => {});
+    }
+  }
+  function press(group, button) {
+    group.forEach(item => {
+      const on = item === button;
+      item.classList.toggle('is-active', on);
+      item.setAttribute('aria-pressed', String(on));
+    });
+  }
+  const swatches = [...layer.querySelectorAll('[data-live-colours] .swatch')];
+  swatches.forEach(button => button.addEventListener('click', () => {
+    press(swatches, button);
+    colour = button.dataset.colour ? {label: button.dataset.label, hex: button.dataset.hex} : null;
+    colourName.textContent = colour ? colour.label : 'As made';
+    applyChoice();
+  }));
+  const finishes = [...layer.querySelectorAll('[data-live-finishes] .finish')];
+  finishes.forEach(button => button.addEventListener('click', () => {
+    press(finishes, button);
+    finish = button.dataset.finish ? {label: button.textContent.trim(), text: button.dataset.finishText} : null;
+    applyChoice();
+  }));
   let sdkPromise;
   let stream;
   let request;
@@ -141,7 +190,7 @@
         token: tokenData.apiKey,
         stream,
         garment,
-        prompt,
+        prompt: buildPrompt(),
         onRemoteStream: remote => {
           if (current !== operation) return;
           result.srcObject = remote;

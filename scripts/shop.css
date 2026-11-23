@@ -62,7 +62,7 @@ html { scroll-padding-top: var(--mast-height); }
 .fitting-options { border: 0; border-top: 1px solid var(--line); padding: 14px 0 0; margin: 23px 0 4px; }
 .fitting-options legend { padding: 0 12px 0 0; font: 500 14px var(--body); }
 .fitting-options > div { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.fitting-options .button { margin: 0; padding: 12px; font-size: 10px; line-height: 1.4; text-align: left; letter-spacing: .05em; gap: 8px; }
+.fitting-options .button { margin: 0; padding: 12px; font-size: 12px; line-height: 1.4; text-align: left; letter-spacing: .05em; gap: 8px; }
 .variant-choice input { inset: 0; margin: 0; }
 .product-accordions details[open] > div { animation: detail-in .22s ease-out; }
 @keyframes detail-in { from { opacity: .3; } }
@@ -83,13 +83,7 @@ html { scroll-padding-top: var(--mast-height); }
   .site-header .brand span { font-size: 32px; }
   .site-footer .footer-main { row-gap: 34px; }
 }
-@media (prefers-reduced-motion:no-preference) {
-  @view-transition { navigation: auto; }
-  .site-header { view-transition-name: masthead; }
-  ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .23s; }
-  ::view-transition-group(masthead) { animation-duration: 0s; }
-  ::view-transition-group(look-photo) { animation-duration: .46s; animation-timing-function: cubic-bezier(.22,.8,.3,1); }
-}
+/* Page changes use the curtain in site-motion.js instead of view transitions. */
 
 /* Ruchs brand: logo lockup and rose-gold accents (wine #4b1539, ivory #fffff0, rose gold #b85c64-#e6b19b). */
 .site-header { border-color: rgba(184, 92, 100, .28); }
@@ -99,7 +93,7 @@ html { scroll-padding-top: var(--mast-height); }
 .brand-wordmark { height: 24px; }
 .brand--footer { align-items: flex-start; gap: 14px; }
 .brand--footer img { display: block; height: clamp(96px, 9vw, 132px); width: auto; }
-.site-footer .brand--footer small { color: #e6b19b; letter-spacing: .32em; font-size: 8px; margin: 0; }
+.site-footer .brand--footer small { color: #e6b19b; letter-spacing: .28em; font-size: 10px; margin: 0; }
 .site-footer .footer-main h2 { color: #e6b19b; }
 .site-footer a:hover { color: #e6b19b; }
 .site-footer .footer-bottom { border-color: rgba(230, 177, 155, .3); }
@@ -189,7 +183,7 @@ html { scroll-padding-top: var(--mast-height); }
 .size-guide[open] summary svg { transform: rotate(180deg); }
 .size-guide__body { padding: 14px 0 4px; font-size: 14px; line-height: 1.6; }
 .size-guide__body p, .size-guide__body li { max-width: 34em; }
-.size-guide__body h3 { font: 500 20px/1.2 var(--display); margin: 18px 0 6px; }
+.size-guide__body h3, .size-guide__body .size-guide__subhead { font: 500 20px/1.2 var(--display); margin: 18px 0 6px; }
 .size-guide__body ul { padding-left: 18px; margin: 0; }
 .size-guide__table { overflow-x: auto; margin: 12px 0; }
 .size-guide table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }

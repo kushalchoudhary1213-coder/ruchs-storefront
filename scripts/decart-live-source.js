@@ -35,4 +35,10 @@ async function start({token, stream, garment, prompt, onRemoteStream, onState, o
   }
 }
 
-window.RuchsDecart = {start, stop, modelName: model.name};
+// Colour and finish changes apply to the running session without reconnecting.
+async function setPrompt(text) {
+  if (!connection) return;
+  await connection.setPrompt(text, {enhance: false});
+}
+
+window.RuchsDecart = {start, stop, setPrompt, modelName: model.name};

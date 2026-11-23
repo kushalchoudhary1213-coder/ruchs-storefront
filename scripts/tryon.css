@@ -86,3 +86,95 @@
 /* Polish: readable minimum text size. */
 .tryon-source span, .tryon-upload span, .tryon-source small, .tryon-upload small, .tryon-placeholder span { font-size: 11px; }
 .tryon-privacy { font-size: 11px !important; }
+
+/* ---------- Customise: fabric close-up, colour swatches, fabric finishes ---------- */
+.tryon-source { padding-bottom: 30px; }
+.tryon-source > div:not(.tryon-closeup) { flex: 1; min-width: 0; }
+.tryon-closeup {
+  position: relative;
+  flex: none;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: var(--closeup) 50% 58% / 620% auto no-repeat, #ead6ce;
+  box-shadow: inset 0 0 0 1px rgba(75, 21, 57, .2), 0 10px 24px rgba(42, 20, 32, .18);
+  animation: tryon-pan 10s ease-in-out infinite alternate;
+}
+.tryon-closeup::after { content: "Fabric close-up"; position: absolute; left: 50%; bottom: -22px; transform: translateX(-50%); font-size: 11px; color: var(--muted); white-space: nowrap; }
+@keyframes tryon-pan { from { background-position: 44% 52%; } to { background-position: 56% 66%; } }
+
+.tryon-colour, .live-custom { margin: 0 0 22px; }
+.tryon-swatches, .tryon-finishes { min-width: 0; margin: 0 0 14px; padding: 0; border: 0; }
+.tryon-swatches legend, .tryon-finishes legend, .tryon-colour-note--plain span { margin: 0 0 10px; padding: 0; font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--plum); }
+.tryon-swatches legend span { margin-left: 8px; font-weight: 500; letter-spacing: .04em; text-transform: none; color: var(--muted); }
+.tryon-swatches > div, .tryon-finishes > div { display: flex; flex-wrap: wrap; gap: 10px; }
+/* Swatches read as fabric: a soft highlight, shading underneath and a satin weave. */
+.swatch {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  background: radial-gradient(circle at 32% 26%, rgba(255, 255, 240, .38), transparent 58%), var(--swatch, #ead6ce);
+  box-shadow: inset 0 -7px 12px rgba(0, 0, 0, .28), 0 2px 5px rgba(42, 20, 32, .22);
+  transition: transform .45s cubic-bezier(.22, 1, .36, 1), box-shadow .3s;
+}
+.swatch::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--tex-satin) 0 0 / 110px; mix-blend-mode: soft-light; opacity: .75; pointer-events: none; }
+.swatch--original { background: var(--swatch-image) 50% 60% / 360% auto no-repeat, #ead6ce; }
+.swatch--original::after { display: none; }
+.swatch:hover { transform: translateY(-2px) scale(1.07); }
+.swatch.is-active { box-shadow: 0 0 0 2px var(--ivory), 0 0 0 4px var(--plum), inset 0 -7px 12px rgba(0, 0, 0, .28); }
+.swatch:focus-visible { outline: 3px solid #b85c64; outline-offset: 5px; }
+
+.finish {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 38px;
+  padding: 0 15px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fffdf5;
+  color: var(--ink);
+  font: 500 12px var(--body);
+  cursor: pointer;
+  transition: border-color .3s, background-color .3s;
+}
+.finish::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--finish-tex, none) 0 0 / 150px; opacity: .4; mix-blend-mode: multiply; }
+.finish--satin { --finish-tex: var(--tex-satin); }
+.finish--crepe { --finish-tex: var(--tex-georgette); }
+.finish--linen { --finish-tex: var(--tex-linen); }
+.finish--velvet { --finish-tex: var(--tex-weave); }
+.finish:hover { border-color: #b85c64; }
+.finish.is-active { border-color: var(--plum); background-color: #f2dfd8; }
+.finish:focus-visible { outline: 3px solid #b85c64; outline-offset: 3px; }
+.tryon-colour-note { margin: 4px 0 0; font-size: 11px; line-height: 1.55; color: var(--muted); }
+.tryon-colour-note--plain { margin: 0 0 22px; }
+.tryon-colour-note--plain span { display: block; margin-bottom: 4px; }
+
+/* Live fitting: the piece thumbnail takes on the chosen colour. */
+.live-piece { position: relative; }
+.live-piece::before { content: ""; position: absolute; left: 0; top: 50%; width: 72px; height: 92px; transform: translateY(-50%); background: var(--tint, transparent); mix-blend-mode: color; opacity: 0; transition: opacity .4s; pointer-events: none; }
+.live-piece.is-tinted::before { opacity: .9; }
+
+/* ---------- Result: before/after slider and fabric loupe ---------- */
+.tryon-result > .tryon-compare { align-self: stretch; justify-self: stretch; }
+.tryon-compare { position: relative; width: 100%; height: 100%; min-height: 340px; max-height: 650px; overflow: hidden; touch-action: pan-y; }
+.tryon-compare img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.tryon-compare__after { position: absolute; inset: 0; }
+.tryon-compare__before { position: absolute; inset: 0; clip-path: inset(0 calc(100% - var(--split)) 0 0); }
+.tryon-compare__handle { position: absolute; top: 0; bottom: 0; left: var(--split); width: 2px; margin-left: -1px; background: #fffff0; box-shadow: 0 0 14px rgba(0, 0, 0, .35); pointer-events: none; }
+.tryon-compare__handle::after { content: "\2039\00a0\203A"; position: absolute; top: 50%; left: 50%; display: grid; place-items: center; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%; background: #fffff0; color: var(--plum); font: 600 16px/1 var(--body); box-shadow: 0 6px 18px rgba(0, 0, 0, .3); }
+.tryon-compare__range { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: ew-resize; -webkit-appearance: none; appearance: none; }
+.tryon-compare:has(.tryon-compare__range:focus-visible) { outline: 3px solid #e6b19b; outline-offset: -3px; }
+.tryon-loupe { position: absolute; left: 0; top: 0; z-index: 2; width: 140px; height: 140px; border: 2px solid #fffff0; border-radius: 50%; background-repeat: no-repeat; box-shadow: 0 14px 34px rgba(0, 0, 0, .45); opacity: 0; pointer-events: none; transition: opacity .25s; }
+.tryon-compare.is-inspecting .tryon-loupe { opacity: 1; }
+.tryon-hint { margin: 12px 0 0; font-size: 11px; line-height: 1.5; color: #f9eee9; opacity: .85; }
+.tryon-hint[hidden] { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tryon-closeup { animation: none; }
+  .swatch, .finish, .live-piece::before { transition: none; }
+}

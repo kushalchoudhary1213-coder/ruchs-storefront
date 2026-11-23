@@ -1,0 +1,70 @@
+/* Ruchs agency motion layer: styles for site-motion.js.
+   Wine #4b1539, deep wine #2a1420, ivory #fffff0, rose gold #b85c64 to #e6b19b. */
+
+/* ---------- Curtain: preloader and page changes ---------- */
+.a-curtain { display: none; }
+.a-js .a-curtain { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; background: radial-gradient(120% 90% at 50% 110%, #7a2a4f 0%, #4b1539 45%, #2a1420 100%); clip-path: inset(0 0 0 0); pointer-events: none; }
+/* If the engine never starts, the curtain lifts by itself. */
+.a-js:not(.a-engine) .a-curtain { animation: a-failsafe .6s 3s forwards; }
+@keyframes a-failsafe { to { opacity: 0; visibility: hidden; } }
+.a-curtain__inner { display: grid; justify-items: center; gap: 22px; }
+.a-curtain img { width: 68px; height: auto; filter: drop-shadow(0 10px 30px rgba(230, 177, 155, .35)); }
+.a-scroll-cue { position: absolute; left: 50%; bottom: 22px; z-index: 3; display: grid; justify-items: center; gap: 8px; transform: translateX(-50%); color: #fffff0; font: 500 10px var(--body, sans-serif); letter-spacing: .3em; text-transform: uppercase; }
+.a-scroll-cue i { width: 1px; height: 46px; background: linear-gradient(#fffff0, transparent); transform-origin: top; animation: a-cue 1.8s cubic-bezier(.65, 0, .35, 1) infinite; }
+@keyframes a-cue { 0% { transform: scaleY(0); } 50% { transform: scaleY(1); transform-origin: top; } 51% { transform-origin: bottom; } 100% { transform: scaleY(0); transform-origin: bottom; } }
+
+/* ---------- Rolling nav links ---------- */
+.a-roll { display: inline-grid; overflow: hidden; vertical-align: top; line-height: 1.25; }
+.a-roll > span { grid-area: 1 / 1; transition: transform .55s cubic-bezier(.76, 0, .24, 1); }
+.a-roll > span + span { transform: translateY(105%); font-style: italic; color: #b85c64; }
+a:hover > .a-roll > span:first-child, a:focus-visible > .a-roll > span:first-child { transform: translateY(-105%); }
+a:hover > .a-roll > span + span, a:focus-visible > .a-roll > span + span { transform: none; }
+
+/* ---------- Buttons: fill sweeps up from below ---------- */
+.button { position: relative; isolation: isolate; overflow: hidden; }
+.button::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(120deg, #b85c64, #e6b19b); transform: translateY(101%); border-radius: 50% 50% 0 0 / 30% 30% 0 0; transition: transform .6s cubic-bezier(.76, 0, .24, 1), border-radius .6s cubic-bezier(.76, 0, .24, 1); }
+.button:hover::before { transform: none; border-radius: 0; }
+.button:hover { color: #2a1420; }
+
+/* ---------- Bag flight and heart sparks ---------- */
+.a-fly { position: fixed; z-index: 9800; object-fit: cover; pointer-events: none; box-shadow: 0 20px 50px rgba(42, 20, 32, .35); }
+.a-spark { position: fixed; z-index: 9800; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%; background: #b85c64; pointer-events: none; }
+.a-spark:nth-child(odd) { background: #e6b19b; }
+
+/* ---------- Product photo zoom ---------- */
+.product-gallery__main { overflow: hidden; }
+
+/* ---------- Reduced motion: nothing moves, nothing stays hidden ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .a-curtain { display: none !important; }
+  .button::before { transition: none; }
+}
+
+/* ---------- Effects layer (site-fx.js) ---------- */
+/* Zoom through to the product page. */
+.a-zoom-back { position: fixed; inset: 0; z-index: 9900; background: #2a1420; opacity: 0; pointer-events: none; }
+.a-zoom-clone { position: fixed; z-index: 9950; object-fit: cover; pointer-events: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .a-zoom-back, .a-zoom-clone { display: none !important; }
+}
+
+/* ---------- Licensed stock media (see README: Credits) ----------
+   Textures: Poly Haven, CC0, made neutral so blend modes tint them.
+   Films: Mixkit Stock Video Free License, graded to the Ruchs palette. */
+:root {
+  --tex-linen: url("/showcase/textures/linen.webp");
+  --tex-satin: url("/showcase/textures/satin.webp");
+  --tex-georgette: url("/showcase/textures/georgette.webp");
+  --tex-weave: url("/showcase/textures/geometric-weave.webp");
+}
+
+/* Linen paper under every ivory page. */
+body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--tex-linen) 0 0 / 420px; opacity: .04; }
+
+/* Page and collection headers: blush fabric drifting behind the title. */
+.listing-intro.a-has-film, .page-intro.a-has-film { position: relative; isolation: isolate; overflow: hidden; }
+.a-intro-film { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; object-fit: cover; opacity: .2; pointer-events: none; -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 45%, #000 100%); mask-image: linear-gradient(90deg, transparent 0%, #000 45%, #000 100%); }
+
+/* Product photo frame and bag drawer: georgette. */
+.product-gallery__main, .cart-drawer { background-image: var(--tex-georgette); background-size: 320px; background-color: #f9eee9; background-blend-mode: multiply; }

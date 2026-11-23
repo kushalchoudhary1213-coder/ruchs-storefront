@@ -11,6 +11,13 @@ function limit(env, name) {
 const providerPauseMinutes = 15;
 const providerUnavailableMessage = 'Virtual try-on is paused until Genlook credits are available.';
 const liveModel = 'lucy-vton-3.6';
+// Colour previews the photo try-on accepts; keys match TRYON_COLOURS in scripts/remap.py.
+// The browser recolours the garment photos and sends them; Genlook reproduces them.
+const tryOnColours = {wine: 'deep wine', rose: 'rose', blush: 'blush pink', emerald: 'emerald green', midnight: 'midnight blue', lavender: 'lavender'};
+// Genlook reads every photo it is given (front, back, on model); more photos give truer detail.
+const maxGarmentPhotos = 4;
+const maxColourPhotos = 3;
+const imageTypes = ['image/jpeg', 'image/png', 'image/webp'];
 const liveSessionSeconds = 30;
 
 // Shopify backend for ruchs.in. Checkout always works through Shopify cart
@@ -190,6 +197,18 @@ async function createLiveToken(request, env) {
   }
 }
 
+async function garmentPhoto(source) {
+  const url = new URL(source);
+  if (url.protocol !== 'https:' || url.hostname !== 'cdn.shopify.com') throw new Error('invalid-garment-url');
+  const response = await timedFetch(url, {}, 20000);
+  if (!response.ok) throw new Error('garment-unavailable');
+  const bytes = await response.arrayBuffer();
+  if (bytes.byteLength > 8_000_000) throw new Error('garment-too-large');
+  const type = response.headers.get('content-type')?.split(';')[0] || 'image/png';
+  if (!type.startsWith('image/')) throw new Error('invalid-garment-image');
+  return new File([bytes], 'product-image', {type});
+}
+
 async function tryOn(request, env) {
   if (!env.GENLOOK_API_KEY || !env.DB) return json({error: 'Try-on is unavailable right now.'}, 503);
   const day = new Date().toISOString().slice(0, 10);
@@ -198,7 +217,7 @@ async function tryOn(request, env) {
   } catch {
     return json({error: 'Try-on is unavailable right now.'}, 503);
   }
-  if (Number(request.headers.get('content-length') || 0) > 3_500_000) {
+  if (Number(request.headers.get('content-length') || 0) > 7_500_000) {
     return json({error: 'Please choose a smaller photo.'}, 413);
   }
 
@@ -215,6 +234,14 @@ async function tryOn(request, env) {
   if (!product || !Number.isInteger(imageIndex) || imageIndex < 0 || imageIndex >= product.images.length) {
     return json({error: 'Choose a valid product photo.'}, 400);
   }
+  const colour = String(fields.get('colour') || '');
+  const recoloured = fields.getAll('garment');
+  if (colour && !Object.hasOwn(tryOnColours, colour)) return json({error: 'Choose a valid colour.'}, 400);
+  if (colour && (!recoloured.length || recoloured.length > maxColourPhotos
+    || recoloured.some(file => !(file instanceof File) || !imageTypes.includes(file.type) || file.size > 1_500_000 || file.size < 1000))) {
+    return json({error: 'Could not prepare the colour preview. Please try again.'}, 400);
+  }
+  if (!colour && recoloured.length) return json({error: 'Choose a valid colour.'}, 400);
 
   let visitor;
   try {
@@ -232,29 +259,35 @@ async function tryOn(request, env) {
   }
 
   try {
-    const garmentUrl = new URL(product.images[imageIndex]);
-    if (garmentUrl.protocol !== 'https:' || garmentUrl.hostname !== 'cdn.shopify.com') throw new Error('invalid-garment-url');
-    const garmentResponse = await timedFetch(garmentUrl, {}, 20000);
-    if (!garmentResponse.ok) throw new Error('garment-unavailable');
-    const garmentBytes = await garmentResponse.arrayBuffer();
-    if (garmentBytes.byteLength > 8_000_000) return json({error: 'This product photo is too large for try-on.'}, 413);
-    const garmentType = garmentResponse.headers.get('content-type')?.split(';')[0] || 'image/png';
-    if (!garmentType.startsWith('image/')) throw new Error('invalid-garment-image');
+    // Garment photos: the recoloured previews, or the chosen product photo plus the others.
+    let garments = recoloured;
+    if (!colour) {
+      const order = [imageIndex, ...product.images.map((_, index) => index).filter(index => index !== imageIndex)].slice(0, maxGarmentPhotos);
+      const fetched = await Promise.all(order.map(index => garmentPhoto(product.images[index]).catch(() => null)));
+      if (!fetched[0]) throw new Error('garment-unavailable');
+      garments = fetched.filter(Boolean);
+    }
 
     const kind = garmentTitle(product);
+    const description = [
+      `${product.title || kind}: ${kind.toLowerCase()} shown on a model.`,
+      product.summary || '',
+      colour ? `Shown in ${tryOnColours[colour]} as a colour preview; keep its print, material texture, cut, sleeves, seams and hem.` : 'Preserve its colour, print, material texture, cut, sleeves, seams and hem.',
+    ].filter(Boolean).join(' ');
     const payload = {
       products: [{
         title: kind,
-        description: `Exact ${kind.toLowerCase()} from a worn-model reference. Preserve its colour, print, material, cut, sleeves, seams, and hem.`,
-        images: [{source: {fileKey: 'product'}, classifications: {on_model: 'true'}}],
+        description,
+        images: garments.map((_, index) => ({source: {fileKey: `product${index}`}, ...(index === 0 ? {classifications: {on_model: 'true'}} : {})})),
       }],
       person: {image: {source: {fileKey: 'person'}}},
-      output: {resolution: 'default', keepForDays: 1},
+      // 2K shows the weave and stitching; it uses one extra Genlook credit per preview.
+      output: {resolution: env.TRYON_RESOLUTION === 'default' ? 'default' : '2k', keepForDays: 1},
     };
     const form = new FormData();
     form.append('data', JSON.stringify(payload));
     form.append('person', person, 'person.jpg');
-    form.append('product', new File([garmentBytes], 'product-image', {type: garmentType}));
+    garments.forEach((file, index) => form.append(`product${index}`, file, `product-${index}`));
     const headers = {'x-api-key': env.GENLOOK_API_KEY};
     const response = await timedFetch(`${providerBase}/try-on/sync`, {method: 'POST', headers, body: form}, 110000);
     if (response.status === 402) {

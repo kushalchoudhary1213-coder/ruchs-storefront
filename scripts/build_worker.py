@@ -28,14 +28,27 @@ for path in dist.rglob("index.html"):
 
 asset_types = {".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".json": "application/json; charset=utf-8", ".txt": "text/plain; charset=utf-8", ".xml": "application/xml; charset=utf-8"}
 assets = {}
-for name in ("remap.css", "remap.js", "react-bits.css", "react-bits.js", "react-bits-license.txt", "tryon.css", "tryon.js", "live-tryon.css", "live-tryon.js", "decart-live.js", "products.json"):
+for name in ("remap.css", "remap.js", "motion.css", "motion.js", "addons.js", "react-bits.css", "react-bits.js", "react-bits-license.txt", "tryon.css", "tryon.js", "recolour.js", "live-tryon.css", "live-tryon.js", "decart-live.js", "products.json"):
     path = dist / name
     assets["/" + name] = {"type": asset_types[path.suffix], "content": path.read_text(encoding="utf-8")}
 
 products = json.loads((dist / "products.json").read_text(encoding="utf-8"))["products"]
 by_handle = {product["handle"]: product for product in products}
+def product_summary(product: dict) -> str:
+    """First sentences of the description, plain text: tells the try-on model the cut and fabric."""
+    text = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", product.get("body_html") or ""))).strip()
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    summary = ""
+    for sentence in sentences:
+        if len(summary) + len(sentence) > 420:
+            break
+        summary = f"{summary} {sentence}".strip()
+    return summary
+
+
 product_images = {
-    product["handle"]: {"handle": product["handle"], "type": product.get("product_type", ""), "images": [image["src"] for image in product["images"]]}
+    product["handle"]: {"handle": product["handle"], "title": product["title"], "type": product.get("product_type", ""),
+                        "summary": product_summary(product), "images": [image["src"] for image in product["images"]]}
     for product in products
 }
 

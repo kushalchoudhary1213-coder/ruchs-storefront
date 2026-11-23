@@ -1,0 +1,49 @@
+/* Ruchs motion layer: page transitions, scroll reveals, film frames, marquee.
+   Timings follow the transitions.dev scale; everything rests under reduced motion. */
+:root {
+  --m-ease: cubic-bezier(.22, 1, .36, 1);
+  --m-fast: 250ms;
+  --m-slow: 400ms;
+  --m-reveal: 900ms;
+}
+
+/* ---------- Header tucks away on scroll down, returns on scroll up ---------- */
+.site-header { transition: transform var(--m-slow) var(--m-ease); }
+.m-header-hidden .site-header { transform: translateY(-100%); }
+
+/* ---------- Product card film (plays on hover / focus) ---------- */
+.product-card__image { position: relative; }
+.product-card__film { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; pointer-events: none; transition: opacity var(--m-slow) var(--m-ease); z-index: 1; }
+.product-card__film.is-playing { opacity: 1; }
+.product-card__image .product-card__view { z-index: 2; }
+
+/* ---------- Product page film ---------- */
+.product-gallery__main { position: relative; }
+.gallery-film { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity var(--m-slow) var(--m-ease); pointer-events: none; }
+.gallery-film.is-playing { opacity: 1; }
+.gallery-film-toggle { position: absolute; left: 16px; bottom: 16px; z-index: 2; display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 16px 0 12px; border: 0; border-radius: 999px; background: rgba(42, 20, 32, .74); color: #fffff0; font: 500 14px var(--body); cursor: pointer; backdrop-filter: blur(6px); transition: background-color var(--m-fast) var(--m-ease); }
+.gallery-film-toggle:hover { background: rgba(75, 21, 57, .85); }
+.gallery-film-toggle svg { width: 18px; height: 18px; }
+.gallery-film-toggle .is-pause, .gallery-film-toggle[aria-pressed="true"] .is-play { display: none; }
+.gallery-film-toggle[aria-pressed="true"] .is-pause { display: inline; }
+#main-product-image { transition: opacity var(--m-fast) var(--m-ease); }
+#main-product-image.m-swap { opacity: 0; }
+
+/* ---------- Marquee band (above every footer) ---------- */
+.marquee { overflow: hidden; background: #4b1539; color: #fffff0; border-bottom: 1px solid rgba(230, 177, 155, .25); }
+.marquee__track { display: flex; width: max-content; animation: m-marquee 38s linear infinite; }
+.a-live .marquee__track { animation: none; } /* GSAP drives it from scroll velocity */
+.marquee__group { display: flex; align-items: center; gap: clamp(22px, 3vw, 44px); padding: 18px clamp(11px, 1.5vw, 22px); white-space: nowrap; }
+.marquee__group span { font: italic 400 clamp(24px, 2.6vw, 38px)/1 var(--display); }
+.marquee__group img { width: 20px; height: auto; opacity: .9; }
+.marquee:hover .marquee__track { animation-play-state: paused; }
+@keyframes m-marquee { to { transform: translateX(-50%); } }
+
+/* ---------- Count-up figures ---------- */
+.article-stat strong { font-variant-numeric: tabular-nums; }
+
+/* ---------- Reduced motion: everything rests, nothing stays hidden ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .marquee__track { animation: none; }
+  .site-header { transition: none; }
+}

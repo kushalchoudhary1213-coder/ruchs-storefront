@@ -8,27 +8,8 @@
   const money = value => `₹ ${Number(value).toLocaleString('en-IN', {maximumFractionDigits: 0})}`;
   const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
   const imagePath = url => `/catalog/${new URL(url).pathname.split('/').pop()}.webp`;
-  // Scope the shared photo to the one collection card that opens this product.
-  // Normal link navigation still handles history, modifier keys and deep links.
-  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    window.addEventListener('pageswap', event => {
-      if (!event.viewTransition || !event.activation) return;
-      const destination = new URL(event.activation.entry.url);
-      const clicked = document.activeElement?.closest('a');
-      const card = clicked?.closest('article')?.querySelector('.product-card__image');
-      const photo = clicked?.href === destination.href ? (card || clicked).querySelector('img') : null;
-      if (photo && destination.pathname.startsWith('/products/')) {
-        photo.style.viewTransitionName = 'look-photo';
-        event.viewTransition.finished.finally(() => photo.style.removeProperty('view-transition-name'));
-      }
-    });
-    window.addEventListener('pagereveal', event => {
-      const photo = document.getElementById('main-product-image');
-      if (!event.viewTransition || !photo) return;
-      photo.style.viewTransitionName = 'look-photo';
-      event.viewTransition.finished.finally(() => photo.style.removeProperty('view-transition-name'));
-    });
-  }
+  const smallPath = url => imagePath(url).replace(/\.webp$/, '.560.webp');
+  // Page-to-page photo morphs (View Transitions) live in site-fx.js and frontier.css.
   const cartNote = 'Taxes included. Shipping and payment are completed on the secure Ruchs checkout.';
   let productsPromise;
   let previousFocus;
@@ -152,7 +133,7 @@
     if (!grid) return;
     const saved = wishlist();
     const matches = (await products()).filter(product => saved.includes(product.handle));
-    grid.innerHTML = matches.map(product => `<article class="product-card"><a class="product-card__image" href="/products/${escapeHTML(product.handle)}/"><img src="${imagePath(product.images[0].src)}" alt="${escapeHTML(product.title)}" loading="lazy"></a><div class="product-card__meta"><div><h3><a href="/products/${escapeHTML(product.handle)}/">${escapeHTML(product.title)}</a></h3><p>${money(product.variants[0].price)}</p></div><button class="icon-button wish-button" data-wish="${escapeHTML(product.handle)}" aria-pressed="true" aria-label="Remove from wishlist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20.8 4.6a5.4 5.4 0 0 0-7.6 0L12 5.8l-1.2-1.2a5.4 5.4 0 0 0-7.6 7.6L12 21l8.8-8.8a5.4 5.4 0 0 0 0-7.6Z"/></svg></button></div></article>`).join('');
+    grid.innerHTML = matches.map(product => `<article class="product-card"><a class="product-card__image" href="/products/${escapeHTML(product.handle)}/"><img src="${smallPath(product.images[0].src)}" srcset="${smallPath(product.images[0].src)} 560w, ${imagePath(product.images[0].src)} 1120w" sizes="(max-width: 700px) 50vw, 25vw" alt="${escapeHTML(product.title)}" loading="lazy"></a><div class="product-card__meta"><div><h3><a href="/products/${escapeHTML(product.handle)}/">${escapeHTML(product.title)}</a></h3><p>${money(product.variants[0].price)}</p></div><button class="icon-button wish-button" data-wish="${escapeHTML(product.handle)}" aria-pressed="true" aria-label="Remove from wishlist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20.8 4.6a5.4 5.4 0 0 0-7.6 0L12 5.8l-1.2-1.2a5.4 5.4 0 0 0-7.6 7.6L12 21l8.8-8.8a5.4 5.4 0 0 0 0-7.6Z"/></svg></button></div></article>`).join('');
     $('#wishlist-empty').hidden = !!matches.length;
     syncWishlist();
   }

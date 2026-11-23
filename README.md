@@ -2,7 +2,7 @@
 
 A redesigned storefront built from the public [Ruchs](https://www.ruchs.in/) catalog captured on 18 November 2026. The 20 products, collection membership, published information, and original photography are retained. The layout and interactions have been remade with an editorial visual system. Product pages include photo and live camera virtual try-on adapted from the sibling Drape project. The generated pages and same-origin APIs run on Cloudflare Workers.
 
-The homepage opens with a silent, looping film of garments on a rail, followed by selected Ruchs products and a shoppable lookbook. GSAP ScrollTrigger and Lenis coordinate desktop scrolling. On phones and tablets, vertical scrolling moves the lookbook horizontally. Visitors with reduced motion enabled can swipe through a native horizontal gallery.
+The homepage opens with a silent, looping film of garments on a rail and a frosted card for one featured piece, followed by selected pieces, the red edit, the lookbook films, Our favourites in a coverflow, the try-on demo and a strip of categories. GSAP ScrollTrigger and Lenis coordinate scrolling. Visitors with reduced motion enabled see the same sections standing still, with Our favourites as a row to swipe.
 
 The opening film uses the supplied 4K garment-rail footage, with separate desktop and phone encodes. It autoplays silently and loops without an on-page pause control.
 
@@ -23,6 +23,27 @@ The photo try-on panel uses the currently selected Ruchs product photo as a worn
 The live panel uses Decart Lucy VTON 3.6 to transform the shopper's camera stream. The Worker uses `DECART_API_KEY` to mint a short-lived token restricted to this site's origin, one model, and a 30-second maximum session. The browser receives only that client token. Live sessions are limited to two per visitor and five across the site per UTC day; failed token requests are refunded. Camera tracks and the Decart connection stop when the panel closes, the timer expires, the page is hidden, or the camera disconnects. Decart charges per second of active generation. The Ruchs catalog uses model photos rather than isolated garment shots, so live garment fidelity may vary.
 
 The product pages, collections, search, wishlist, and informational routes are local. Cart and wishlist changes are saved in the browser.
+
+## Try-on options
+
+Photo try-on (Genlook) sends up to four photos of the piece and its description, and generates at 2K so weave, print and stitching show. 2K uses one extra Genlook credit per preview (2 instead of 1); set the Worker variable `TRYON_RESOLUTION` to `default` to go back to 1 credit. Genlook reproduces the photos it receives and has no colour option, so colour previews are made in the visitor's browser: `scripts/tryon.js` recolours the garment's own hue in the photos before upload, keeping its texture and folds. `scripts/garment_colour.py` decides at build time which pieces can be recoloured cleanly. Only clearly blue, purple or pink pieces qualify, so skin, hair and backgrounds never change colour. Other pieces are shown as made.
+
+Live try-on (Decart) adds colour and fabric finish (satin, crepe, linen, velvet) to its prompt and can change them mid-session. Both try-ons say plainly that colours and finishes are a styling preview: each piece is made as shown in its photos. The preview colours are `TRYON_COLOURS` in `scripts/remap.py`, and the Worker accepts the same keys.
+
+## Motion, films and credits
+
+Motion runs from `scripts/site-motion.js` and `scripts/site-fx.js` (bundled to `/showcase/site-motion.js`), with styles in `scripts/agency.css` and `scripts/frontier.css`. It is built on open-source libraries: GSAP with its bundled ScrollTrigger, SplitText and Flip plugins, and Lenis (MIT). Everything stands still for visitors who ask for reduced motion.
+
+Browser-native features: cross-document View Transitions move between pages and morph a product photo into its product page (the curtain and photo zoom remain for browsers without them), and speculation rules prefetch likely next pages. `scripts/addons.js` adds instant search (`/` or Ctrl+K), quick view on product cards, a full-screen photo viewer, recently viewed pieces (kept in the visitor's browser) and a back-to-top button whose ring fills through a CSS scroll-driven animation.
+
+The motion follows a reference film of a luxury storefront, in Ruchs colours and type. Films sit in still windows (`[data-window]`): each film is fixed to the screen and clipped to its own section with `clip-path`, so the section before uncovers it and the panel after slides over it while the film stays put. These are the hero film, the red satin behind the red edit, the two lookbook films side by side, the about page film and the blush fabric behind page and collection titles. Films play only while their window is on screen, and the hero film stays paused if the visitor paused it. Around them the content rises in: selected pieces arrive in four columns at different speeds, the red edit pieces and the category tiles open upward one after another, and headings rise word by word. On product cards the second photo fades in, a quick-view bar slides up from the bottom of the photo and the heart appears in its corner. Our favourites is a coverflow: the section holds while scrolling turns it, the centre piece is large and named, its neighbours shrink and fade with their distance, and a side piece or the arrows turn it to that piece. Product-card photos settle as they scroll in (CSS view timelines) and accordions open smoothly (CSS size interpolation).
+
+Product films in `assets/films/` are made from the catalog photos by `scripts/make_films.py`. Stock media is mood and texture only; it never stands in for a Ruchs piece. `scripts/make_stock.py` turns the downloaded originals into the files in `assets/showcase/`:
+
+- Fabric textures (`assets/showcase/textures/`): Poly Haven, CC0. Crepe Satin, Crepe Georgette, Rough Linen, Faux Fur Geometric (polyhaven.com), as 640px tiles.
+- Films (`assets/showcase/stock/`): Mixkit, Stock Video Free License. "Pink fabric moving in the wind" (40233, behind page and collection titles) and "Red wavy fabric texture" (40213, the red edit's satin window, encoded at 1280px) (mixkit.co). Colour-graded to the Ruchs palette.
+
+Photos: the build saves every catalog photo twice, at up to 1120px and as a 560px copy (`scripts/catalog_media.py`). Cards, tiles, thumbnails and film posters use `srcset`, so phones and small slots load the small copy; the product page photo and the try-on demo use the full one.
 
 ## Catalog updates
 

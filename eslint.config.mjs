@@ -12,7 +12,7 @@ export default defineConfig([
     languageOptions: { ecmaVersion: 2024, sourceType: "script", globals: { ...globals.browser } },
   },
   {
-    files: ["scripts/showcase-motion.js", "scripts/decart-live-source.js"],
+    files: ["scripts/showcase-motion.js", "scripts/site-motion.js", "scripts/site-fx.js", "scripts/site-gl.js", "scripts/decart-live-source.js"],
     languageOptions: { sourceType: "module" },
   },
   {
